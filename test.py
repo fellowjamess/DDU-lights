@@ -131,7 +131,7 @@ def main():
                                 print(f"LED {i}: Position {position}")
                                 
                                 # Save debug image with detection visualization
-                                cv2.circle(frame, image_point, 5, (0, 255, 0), -1)
+                                cv2.circle(frame, image_point, 5, (255, 0, 0), -1)
                                 cv2.imwrite(f"debug_led_{i}.jpg", frame)
                                 break
                 
