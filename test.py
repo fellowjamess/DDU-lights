@@ -91,7 +91,7 @@ def main():
             pixels.show()
             
             # Wait for stable image
-            time.sleep(0.1)
+            time.sleep(0.5)
             
             # Multiple attempts to detect LED
             max_attempts = 3
@@ -136,7 +136,7 @@ def main():
                                 break
                 
                 if attempt < max_attempts - 1:
-                    time.sleep(0.1)
+                    time.sleep(0.2)
     
     except KeyboardInterrupt:
         print("Scanning interrupted")
