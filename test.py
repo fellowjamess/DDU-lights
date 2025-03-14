@@ -77,7 +77,9 @@ def main():
     pixels.fill((0, 0, 0))
     pixels.show()
     
-    coordinates = []
+    # Initialize arrays for storing coordinates
+    valid_indices = []
+    valid_positions = []
     
     try:
         # Scan each LED
@@ -90,23 +92,32 @@ def main():
             # Wait for stable image
             time.sleep(0.1)
             
-            # Capture frame
-            frame = camera.capture_array()
-            
-            # Detect LED position in image
-            image_point = detect_bright_point(frame)
-            
-            if image_point:
-                # Calculate 3D position
-                position = calculate_3d_position(i, image_point, camera_params)
-                if position:
-                    coordinates.append((i, position))
-                    print(f"LED {i}: Position {position}")
-            
-            # Save debug image
-            if image_point:
-                cv2.circle(frame, image_point, 5, (0, 255, 0), -1)
-                cv2.imwrite(f"debug_led_{i}.jpg", frame)
+            # Multiple attempts to detect LED
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                # Capture frame
+                frame = camera.capture_array()
+                
+                # Detect LED position in image
+                image_point = detect_bright_point(frame)
+                
+                if image_point:
+                    # Calculate 3D position
+                    position = calculate_3d_position(i, image_point, camera_params)
+                    if position:
+                        # Validate position (remove impossible values)
+                        if -10 < position[2] < 10:  # depth sanity check
+                            valid_indices.append(i)
+                            valid_positions.append(position)
+                            print(f"LED {i}: Position {position}")
+                            
+                            # Save debug image
+                            cv2.circle(frame, image_point, 5, (0, 255, 0), -1)
+                            cv2.imwrite(f"debug_led_{i}.jpg", frame)
+                            break
+                
+                if attempt < max_attempts - 1:
+                    time.sleep(0.1)  # Wait before next attempt
     
     except KeyboardInterrupt:
         print("Scanning interrupted")
@@ -117,9 +128,17 @@ def main():
         pixels.fill((0, 0, 0))
         pixels.show()
         
-        # Save results
-        np.save("led_coordinates.npy", coordinates)
-        print("Coordinates saved to led_coordinates.npy")
+        # Convert to numpy arrays and save
+        if valid_indices:
+            valid_indices = np.array(valid_indices)
+            valid_positions = np.array(valid_positions)
+            np.savez("led_coordinates.npz", 
+                    indices=valid_indices, 
+                    positions=valid_positions)
+            print(f"Saved {len(valid_indices)} valid LED positions")
+            print("Coordinates saved to led_coordinates.npz")
+        else:
+            print("No valid LED positions detected")
 
 if __name__ == "__main__":
     main()
