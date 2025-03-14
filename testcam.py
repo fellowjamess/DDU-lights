@@ -68,7 +68,7 @@ def main():
         print("Stopping camera...")
     
     finally:
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
         picam2.stop()
 
 if __name__ == '__main__':
