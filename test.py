@@ -84,9 +84,10 @@ def main():
     try:
         # Scan each LED
         for i in range(num_pixels):
-            # Turn on single LED
+            # Turn on single LED with bright green
             pixels.fill((0, 0, 0))
-            pixels[i] = (255, 255, 255)
+            pixels[i] = (0, 255, 0)  # Changed to pure green
+            pixels.brightness = 1.0   # Maximum brightness
             pixels.show()
             
             # Wait for stable image
@@ -98,37 +99,56 @@ def main():
                 # Capture frame
                 frame = camera.capture_array()
                 
-                # Detect LED position in image
-                image_point = detect_bright_point(frame)
+                # Convert frame to HSV for better green detection
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 
-                if image_point:
-                    # Calculate 3D position
-                    position = calculate_3d_position(i, image_point, camera_params)
-                    if position:
-                        # Validate position (remove impossible values)
-                        if -10 < position[2] < 10:  # depth sanity check
-                            valid_indices.append(i)
-                            valid_positions.append(position)
-                            print(f"LED {i}: Position {position}")
-                            
-                            # Save debug image
-                            cv2.circle(frame, image_point, 5, (0, 255, 0), -1)
-                            cv2.imwrite(f"debug_led_{i}.jpg", frame)
-                            break
+                # Define green color range
+                lower_green = np.array([40, 100, 100])
+                upper_green = np.array([80, 255, 255])
+                
+                # Create mask for green pixels
+                mask = cv2.inRange(hsv, lower_green, upper_green)
+                
+                # Find contours in the mask
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                if contours:
+                    # Get largest contour
+                    largest = max(contours, key=cv2.contourArea)
+                    M = cv2.moments(largest)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        image_point = (cx, cy)
+                        
+                        # Calculate 3D position
+                        position = calculate_3d_position(i, image_point, camera_params)
+                        if position:
+                            # Validate position
+                            if -10 < position[2] < 10:  # depth sanity check
+                                valid_indices.append(i)
+                                valid_positions.append(position)
+                                print(f"LED {i}: Position {position}")
+                                
+                                # Save debug image with detection visualization
+                                cv2.circle(frame, image_point, 5, (0, 255, 0), -1)
+                                cv2.imwrite(f"debug_led_{i}.jpg", frame)
+                                break
                 
                 if attempt < max_attempts - 1:
-                    time.sleep(0.1)  # Wait before next attempt
+                    time.sleep(0.1)
     
     except KeyboardInterrupt:
         print("Scanning interrupted")
     
     finally:
-        # Cleanup
-        camera.stop()
+        # Reset LED strip
+        pixels.brightness = 0.5  # Reset to original brightness
         pixels.fill((0, 0, 0))
         pixels.show()
+        camera.stop()
         
-        # Convert to numpy arrays and save
+        # Save results
         if valid_indices:
             valid_indices = np.array(valid_indices)
             valid_positions = np.array(valid_positions)
