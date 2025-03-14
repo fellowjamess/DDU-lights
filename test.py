@@ -52,7 +52,6 @@ def rainbow_cycle(wait):
         if i == 0:
             pixel_index = (i * 256 // num_pixels)
             pixels[i] = wheel(pixel_index & 255)
-            time.sleep(100)
         pixels.show()
         time.sleep(wait)
 
