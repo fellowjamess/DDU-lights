@@ -18,10 +18,10 @@ num_pixels = 40 # 40 pixels on the strip
 
 # The order of the pixel colors - RGB or GRB. Some NeoPixels have red and green reversed!
 # For RGBW NeoPixels, simply change the ORDER to RGBW or GRBW.
-ORDER = neopixel.BGR
+ORDER = neopixel.RGB
 
 pixels = neopixel.NeoPixel(
-    pixel_pin, num_pixels, brightness=1, auto_write=False, pixel_order=ORDER
+    pixel_pin, num_pixels, brightness=0.2, auto_write=False, pixel_order=ORDER
 )
 
 
