@@ -1,9 +1,14 @@
 from picamera2 import Picamera2
 import cv2
 import time
-import numpy as np
+import os
 
 def main():
+    # Create output directory
+    output_dir = "face_detections"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     # Initialize the camera
     picam2 = Picamera2()
     
@@ -20,6 +25,7 @@ def main():
     # Start the camera
     picam2.start()
     
+    frame_count = 0
     try:
         while True:
             # Capture frame
@@ -39,37 +45,42 @@ def main():
                 minSize=(30, 30)
             )
             
-            # Draw rectangle around faces
-            for (x, y, w, h) in faces:
-                # Draw filled rectangle with transparency
-                overlay = frame.copy()
-                cv2.rectangle(overlay, (x, y), (x+w, y+h), (0, 255, 0), -1)
-                alpha = 0.3
-                frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+            # Process detected faces
+            if len(faces) > 0:
+                # Draw rectangle around faces
+                for (x, y, w, h) in faces:
+                    # Draw filled rectangle with transparency
+                    overlay = frame.copy()
+                    cv2.rectangle(overlay, (x, y), (x+w, y+h), (0, 255, 0), -1)
+                    alpha = 0.3
+                    frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+                    
+                    # Draw border
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                    
+                    # Add text with background
+                    text = 'Face Detected'
+                    text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)[0]
+                    cv2.rectangle(frame, (x, y-text_size[1]-10), (x+text_size[0], y), (0, 255, 0), -1)
+                    cv2.putText(frame, text, (x, y-10), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
                 
-                # Draw border
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                
-                # Add text with background
-                text = 'Face Detected'
-                text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)[0]
-                cv2.rectangle(frame, (x, y-text_size[1]-10), (x+text_size[0], y), (0, 255, 0), -1)
-                cv2.putText(frame, text, (x, y-10), 
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
+                # Save frame with detected faces
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                output_path = f"{output_dir}/face_detected_{timestamp}_{frame_count}.jpg"
+                cv2.imwrite(output_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                print(f"Face detected! Saved as {output_path}")
+                frame_count += 1
             
-            # Display using cv2.imshow without named window
-            cv2.imshow('Face Detection', frame)
-            
-            # Break loop on 'q' press
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            # Small delay to prevent overwhelming the system
+            time.sleep(0.1)
                 
     except KeyboardInterrupt:
         print("Stopping camera...")
     
     finally:
-        #cv2.destroyAllWindows()
         picam2.stop()
+        print(f"Captured {frame_count} frames with faces")
 
 if __name__ == '__main__':
     main()
