@@ -21,7 +21,7 @@ num_pixels = 40 # 40 pixels on the strip
 ORDER = neopixel.RGB
 
 pixels = neopixel.NeoPixel(
-    pixel_pin, num_pixels, brightness=10, auto_write=False, pixel_order=ORDER
+    pixel_pin, num_pixels, brightness=1, auto_write=False, pixel_order=ORDER
 )
 
 
