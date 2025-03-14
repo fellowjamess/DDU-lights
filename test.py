@@ -56,26 +56,63 @@ def rainbow_cycle(wait):
         time.sleep(wait)
 
 
+def bounce(color, wait):
+    """Bounce effect from end to end."""
+    for i in range(num_pixels):
+        pixels.fill((0, 0, 0))
+        pixels[i] = color
+        pixels.show()
+        time.sleep(wait)
+    for i in range(num_pixels-1, -1, -1):
+        pixels.fill((0, 0, 0))
+        pixels[i] = color
+        pixels.show()
+        time.sleep(wait)
+
+def theater_chase(color, wait):
+    """Movie theater light style chaser animation."""
+    for q in range(3):
+        for i in range(0, num_pixels, 3):
+            if i + q < num_pixels:
+                pixels[i + q] = color
+        pixels.show()
+        time.sleep(wait)
+        for i in range(0, num_pixels, 3):
+            if i + q < num_pixels:
+                pixels[i + q] = (0, 0, 0)
+
+def color_wipe(color, wait):
+    """Wipe color across display a pixel at a time."""
+    for i in range(num_pixels):
+        pixels[i] = color
+        pixels.show()
+        time.sleep(wait)
+
 while True:
-    # Comment this line out if you have RGBW/GRBW NeoPixels
-    pixels.fill((255, 0, 0))
-    # Uncomment this line if you have RGBW/GRBW NeoPixels
-    # pixels.fill((255, 0, 0, 0))
+    # Bouncing red dot
+    bounce((255, 0, 0), 0.05)
+    
+    # Theater chase with blue
+    for _ in range(5):
+        theater_chase((0, 0, 255), 0.05)
+    
+    # Color wipe with green
+    color_wipe((0, 255, 0), 0.05)
+    
+    # Rainbow cycle
+    rainbow_cycle(0.001)
+    
+    # Random color burst
+    for i in range(num_pixels):
+        pixels[i] = wheel(i * 256 // num_pixels)
     pixels.show()
     time.sleep(1)
-
-    # Comment this line out if you have RGBW/GRBW NeoPixels
-    pixels.fill((0, 255, 0))
-    # Uncomment this line if you have RGBW/GRBW NeoPixels
-    # pixels.fill((0, 255, 0, 0))
-    pixels.show()
-    time.sleep(1)
-
-    # Comment this line out if you have RGBW/GRBW NeoPixels
-    pixels.fill((0, 0, 255))
-    # Uncomment this line if you have RGBW/GRBW NeoPixels
-    # pixels.fill((0, 0, 255, 0))
-    pixels.show()
-    time.sleep(1)
-
-    rainbow_cycle(0.001)  # rainbow cycle with 1ms delay per step
+    
+    # Strobe effect
+    for _ in range(10):
+        pixels.fill((255, 255, 255))
+        pixels.show()
+        time.sleep(0.05)
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        time.sleep(0.05)
