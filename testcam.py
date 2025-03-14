@@ -1,14 +1,15 @@
 from picamera2 import Picamera2
 import cv2
 import time
+import numpy as np
 
 def main():
     # Initialize the camera
     picam2 = Picamera2()
     
-    # Configure the camera with smaller resolution for better performance
+    # Configure the camera
     preview_config = picam2.create_preview_configuration(
-        main={"size": (640, 480)},  # Reduced resolution
+        main={"size": (640, 480)},
         buffer_count=4
     )
     picam2.configure(preview_config)
@@ -18,9 +19,6 @@ def main():
     
     # Start the camera
     picam2.start()
-    
-    # Create named window
-    cv2.namedWindow('Face Detection', cv2.WINDOW_NORMAL)
     
     try:
         while True:
@@ -46,7 +44,7 @@ def main():
                 # Draw filled rectangle with transparency
                 overlay = frame.copy()
                 cv2.rectangle(overlay, (x, y), (x+w, y+h), (0, 255, 0), -1)
-                alpha = 0.3  # Transparency factor
+                alpha = 0.3
                 frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
                 
                 # Draw border
@@ -59,7 +57,7 @@ def main():
                 cv2.putText(frame, text, (x, y-10), 
                           cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
             
-            # Display the frame
+            # Display using cv2.imshow without named window
             cv2.imshow('Face Detection', frame)
             
             # Break loop on 'q' press
@@ -70,7 +68,6 @@ def main():
         print("Stopping camera...")
     
     finally:
-        # Cleanup
         cv2.destroyAllWindows()
         picam2.stop()
 
