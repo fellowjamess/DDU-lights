@@ -14,7 +14,7 @@ import neopixel
 pixel_pin = board.D18
 
 # The number of NeoPixels
-num_pixels = 40
+num_pixels = 40 - 1 # 40 pixels on the strip starting from 0
 
 # The order of the pixel colors - RGB or GRB. Some NeoPixels have red and green reversed!
 # For RGBW NeoPixels, simply change the ORDER to RGBW or GRBW.
@@ -49,9 +49,10 @@ def wheel(pos):
 
 def rainbow_cycle(wait):
     for i in range(num_pixels):
-        if i == 1:
+        if i == 0:
             pixel_index = (i * 256 // num_pixels)
             pixels[i] = wheel(pixel_index & 255)
+            time.sleep(100)
         pixels.show()
         time.sleep(wait)
 
