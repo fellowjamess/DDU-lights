@@ -103,14 +103,14 @@ while True:
     rainbow_cycle(0.001)
     
     # Random color burst
-    # for i in range(num_pixels):
-    #    pixels[i] = wheel(i * 256 // num_pixels)
-    #pixels.show()
-    #time.sleep(1)
+    for i in range(num_pixels):
+        pixels[i] = wheel(i * 256 // num_pixels)
+    pixels.show()
+    time.sleep(1)
     
     # Strobe effect
     for _ in range(10):
-        pixels.fill((255, 255, 255))
+        #pixels.fill((255, 255, 255))
         pixels.show()
         time.sleep(0.05)
         pixels.fill((0, 0, 0))
