@@ -89,30 +89,32 @@ def color_wipe(color, wait):
         time.sleep(wait)
 
 while True:
-    # Bouncing red dot
-    bounce((255, 0, 0), 0.05)
-    
-    # Theater chase with blue
-    for _ in range(5):
-        theater_chase((0, 0, 255), 0.05)
-    
-    # Color wipe with green
-    color_wipe((0, 255, 0), 0.05)
-    
-    # Rainbow cycle
-    rainbow_cycle(0.001)
-    
-    # Random color burst
-    for i in range(num_pixels):
-        pixels[i] = wheel(i * 256 // num_pixels)
+    pixels.fill((0, 0, 255))
     pixels.show()
-    time.sleep(1)
+    # # Bouncing red dot
+    # bounce((255, 0, 0), 0.05)
     
-    # Strobe effect
-    for _ in range(10):
-        #pixels.fill((255, 255, 255))
-        pixels.show()
-        time.sleep(0.05)
-        pixels.fill((0, 0, 0))
-        pixels.show()
-        time.sleep(0.05)
+    # # Theater chase with blue
+    # for _ in range(5):
+    #     theater_chase((0, 0, 255), 0.05)
+    
+    # # Color wipe with green
+    # color_wipe((0, 255, 0), 0.05)
+    
+    # # Rainbow cycle
+    # rainbow_cycle(0.001)
+    
+    # # Random color burst
+    # for i in range(num_pixels):
+    #     pixels[i] = wheel(i * 256 // num_pixels)
+    # pixels.show()
+    # time.sleep(1)
+    
+    # # Strobe effect
+    # for _ in range(10):
+    #     #pixels.fill((255, 255, 255))
+    #     pixels.show()
+    #     time.sleep(0.05)
+    #     pixels.fill((0, 0, 0))
+    #     pixels.show()
+    #     time.sleep(0.05)
