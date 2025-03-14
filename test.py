@@ -89,7 +89,7 @@ def color_wipe(color, wait):
         time.sleep(wait)
 
 while True:
-    pixels.fill(0, 0, 255)
+    pixels.fill((0, 0, 255))
     pixels.show()
     # # Bouncing red dot
     # bounce((255, 0, 0), 0.05)
