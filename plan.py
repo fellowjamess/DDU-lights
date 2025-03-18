@@ -25,7 +25,7 @@ def setup_camera():
 
 def detect_led_position(frame, i):
     # Convert to HSV for better LED detection
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_GBR2HSV)
     
     # GBR order for NeoPixel
     # Define ranges for red (requires two ranges due to how hue wraps around)
