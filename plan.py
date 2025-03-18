@@ -46,6 +46,16 @@ def detect_led_position(frame):
     # Combine masks
     mask = cv2.bitwise_or(cv2.bitwise_or(mask_red1, mask_red2), mask_yellow)
     
+    # Show the mask
+    cv2.imshow('Mask View', mask)
+    cv2.waitKey(1)
+    
+    # Save the mask
+    if not os.path.exists('mask'):
+        os.makedirs('mask')
+    cv2.imwrite(f"mask/led_{led_index}_mask.jpg", mask)
+
+
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
