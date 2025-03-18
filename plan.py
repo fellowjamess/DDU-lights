@@ -27,19 +27,16 @@ def detect_led_position(frame):
     # Convert to HSV for better LED detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # Define range for green LED
-    # H: 40-80 (green hue range)
-    # S: 100-255 (medium to full saturation)
-    # V: 100-255 (medium to full brightness)
-    lower_green = np.array([40, 100, 100])
-    upper_green = np.array([80, 255, 255])
+    # Define range for bright LED
+    # First is green, second is blue, third is red
+    lower = np.array([40, 100, 100])  # Green HSV range
+    upper = np.array([80, 255, 255])  # Green HSV range
     
-    # Create mask and find contours for green color
-    mask = cv2.inRange(hsv, lower_green, upper_green)
+    # Create mask and find contours
+    mask = cv2.inRange(hsv, lower, upper)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if contours:
-        # Get largest green contour
         largest = max(contours, key=cv2.contourArea)
         M = cv2.moments(largest)
         if M["m00"] != 0:
@@ -51,8 +48,9 @@ def detect_led_position(frame):
 def capture_plan(camera, angle_name):
     positions = []
     
-    # Turn on all LEDs with green color
-    pixels.fill((0, 255, 0))  # Green color (GRB format)
+    # Turn on all LEDs
+    # With white, where first is green, second is blue, third is red
+    pixels.fill((255, 255, 255))
     pixels.show()
     
     # Wait for stable image
