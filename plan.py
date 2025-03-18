@@ -29,8 +29,8 @@ def detect_led_position(frame):
     
     # Define range for bright LED
     # First is green, second is blue, third is red
-    lower = np.array([40, 100, 100])  # Green HSV range
-    upper = np.array([80, 255, 255])  # Green HSV range
+    lower = np.array([100, 100, 40])  # Green HSV range
+    upper = np.array([255, 255, 80])  # Green HSV range
     
     # Create mask and find contours
     mask = cv2.inRange(hsv, lower, upper)
