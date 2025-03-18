@@ -68,7 +68,7 @@ def main():
     
     # Camera parameters (needs calibration)
     camera_params = {
-        'focal_length': 1000,  # pixels
+        'focal_length': 9000,  # pixels
         'baseline': 0.1,       # meters
         'cx': 640,            # principal point x
         'cy': 360             # principal point y
@@ -82,43 +82,37 @@ def main():
     valid_indices = []
     valid_positions = []
 
-    # Create data folder if it doesn't exist
-    if not os.path.exists('data'):
-        os.makedirs('data')
+    # Create necessary folders
+    for folder in ['data', 'data2', 'position']:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
     
     try:
-        # Scan each LED
+        # First scan
+        print("Starting first scan...")
+        first_positions = []
+        first_indices = []
+        
+        # Scan each LED from first position
         for i in range(num_pixels):
-            # Turn on single LED with bright green
             pixels.fill((0, 0, 0))
-            pixels[i] = (0, 255, 0)  # Changed to pure green
-            pixels.brightness = 1.0   # Maximum brightness
+            pixels[i] = (0, 255, 0)
+            pixels.brightness = 1.0
             pixels.show()
             
-            # Wait for stable image
             time.sleep(0.35)
             
-            # Multiple attempts to detect LED
             max_attempts = 3
             for attempt in range(max_attempts):
-                # Capture frame
                 frame = camera.capture_array()
-                
-                # Convert frame to HSV for better green detection
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 
-                # Define green color range
                 lower_green = np.array([40, 100, 100])
                 upper_green = np.array([80, 255, 255])
-                
-                # Create mask for green pixels
                 mask = cv2.inRange(hsv, lower_green, upper_green)
-                
-                # Find contours in the mask
                 contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 
                 if contours:
-                    # Get largest contour
                     largest = max(contours, key=cv2.contourArea)
                     M = cv2.moments(largest)
                     if M["m00"] != 0:
@@ -126,29 +120,84 @@ def main():
                         cy = int(M["m01"] / M["m00"])
                         image_point = (cx, cy)
                         
-                        # Calculate 3D position
                         position = calculate_3d_position(i, image_point, camera_params)
                         if position:
-                            # Validate position
-                            if -10 < position[2] < 10:  # depth sanity check
-                                valid_indices.append(i)
-                                valid_positions.append(position)
-                                print(f"LED {i}: Position {position}")
+                            if -10 < position[2] < 10:
+                                first_indices.append(i)
+                                first_positions.append(position)
+                                print(f"LED {i}: Position {position} (First scan)")
                                 
-                                # Save debug image with detection visualization
                                 cv2.circle(frame, image_point, 5, (255, 0, 0), -1)
                                 cv2.imwrite(f"data/debug_led_{i}.jpg", frame)
                                 break
                 
                 if attempt < max_attempts - 1:
                     time.sleep(0.1)
+        
+        # Wait 5 seconds before second scan
+        print("Waiting 5 seconds before second scan...")
+        time.sleep(5)
+        
+        # Second scan
+        print("Starting second scan...")
+        second_positions = []
+        second_indices = []
+        
+        # Scan each LED from second position
+        for i in range(num_pixels):
+            pixels.fill((0, 0, 0))
+            pixels[i] = (0, 255, 0)
+            pixels.brightness = 1.0
+            pixels.show()
+            
+            time.sleep(0.35)
+            
+            for attempt in range(max_attempts):
+                frame = camera.capture_array()
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                mask = cv2.inRange(hsv, lower_green, upper_green)
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                if contours:
+                    largest = max(contours, key=cv2.contourArea)
+                    M = cv2.moments(largest)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        image_point = (cx, cy)
+                        
+                        position = calculate_3d_position(i, image_point, camera_params)
+                        if position:
+                            if -10 < position[2] < 10:
+                                second_indices.append(i)
+                                second_positions.append(position)
+                                print(f"LED {i}: Position {position} (Second scan)")
+                                
+                                cv2.circle(frame, image_point, 5, (255, 0, 0), -1)
+                                cv2.imwrite(f"data2/debug_led_{i}.jpg", frame)
+                                break
+                
+                if attempt < max_attempts - 1:
+                    time.sleep(0.1)
+        
+        # Calculate final positions using both scans
+        for i in range(num_pixels):
+            if i in first_indices and i in second_indices:
+                first_pos = first_positions[first_indices.index(i)]
+                second_pos = second_positions[second_indices.index(i)]
+                
+                # Average the positions
+                final_pos = tuple((a + b) / 2 for a, b in zip(first_pos, second_pos))
+                valid_indices.append(i)
+                valid_positions.append(final_pos)
+                print(f"LED {i}: Final Position {final_pos}")
     
     except KeyboardInterrupt:
         print("Scanning interrupted")
     
     finally:
         # Reset LED strip
-        pixels.brightness = 0.5  # Reset to original brightness
+        pixels.brightness = 0.5
         pixels.fill((0, 0, 0))
         pixels.show()
         camera.stop()
@@ -157,11 +206,11 @@ def main():
         if valid_indices:
             valid_indices = np.array(valid_indices)
             valid_positions = np.array(valid_positions)
-            np.savez("data/led_coordinates.npz", 
+            np.savez("position/led_coordinates.npz", 
                     indices=valid_indices, 
                     positions=valid_positions)
             print(f"Saved {len(valid_indices)} valid LED positions")
-            print("Coordinates saved to data/led_coordinates.npz")
+            print("Coordinates saved to position/led_coordinates.npz")
         else:
             print("No valid LED positions detected")
 

@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Load the coordinates
-data = np.load('data/led_coordinates.npz')
+# Load the coordinates from the position folder
+data = np.load('position/led_coordinates.npz')
 indices = data['indices']
 positions = data['positions']
 
