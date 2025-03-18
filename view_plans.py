@@ -2,17 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
-def setup_camera():
-    # Placeholder function for setting up the camera
-    pass
-
 def main():
-    camera = setup_camera()
-    
-    # Create window for mask visualization
-    cv2.namedWindow('Mask View', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Mask View', 640, 480)
-    
     # Load the coordinate data
     try:
         alpha_positions = np.load('plan_alpha.npy')
@@ -61,15 +51,6 @@ def main():
     # Adjust layout and display
     plt.tight_layout()
     plt.show()
-
-    try:
-        pass  # Placeholder for additional code
-    finally:
-        # Clean up
-        cv2.destroyAllWindows()  # Close all OpenCV windows
-        pixels.fill((0, 0, 0))
-        pixels.show()
-        camera.stop()
 
 if __name__ == "__main__":
     main()
