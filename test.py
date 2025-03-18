@@ -63,6 +63,49 @@ def calculate_3d_position(pixel_index, image_points, camera_params):
         return (led_x, world_y, depth)
     return None
 
+def capture_images(camera, folder, num_pixels):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    
+    for i in range(num_pixels):
+        # Turn on single LED with bright green
+        pixels.fill((0, 0, 0))
+        pixels[i] = (0, 255, 0)  # Changed to pure green
+        pixels.brightness = 1.0   # Maximum brightness
+        pixels.show()
+        
+        # Wait for stable image
+        time.sleep(0.35)
+        
+        # Capture frame
+        frame = camera.capture_array()
+        
+        # Convert frame to HSV for better green detection
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        
+        # Define green color range
+        lower_green = np.array([40, 100, 100])
+        upper_green = np.array([80, 255, 255])
+        
+        # Create mask for green pixels
+        mask = cv2.inRange(hsv, lower_green, upper_green)
+        
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if contours:
+            # Get largest contour
+            largest = max(contours, key=cv2.contourArea)
+            M = cv2.moments(largest)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                image_point = (cx, cy)
+                
+                # Save debug image with detection visualization
+                cv2.circle(frame, image_point, 5, (255, 0, 0), -1)
+                cv2.imwrite(f"{folder}/debug_led_{i}.jpg", frame)
+
 def main():
     # Initialize camera
     camera = setup_camera()
@@ -83,57 +126,34 @@ def main():
     valid_indices = []
     valid_positions = []
 
-    # Create data folder if it doesn't exist
-    if not os.path.exists('data'):
-        os.makedirs('data')
-    
     try:
-        # Scan each LED
+        # Capture first set of images
+        capture_images(camera, 'data', num_pixels)
+        
+        # Wait for 5 seconds
+        time.sleep(5)
+        
+        # Simulate moving the camera to a different position
+        camera_params['cx'] += 10  # Adjust the principal point x for the second set
+        
+        # Capture second set of images
+        capture_images(camera, 'data2', num_pixels)
+        
+        # Calculate 3D positions using images from both folders
         for i in range(num_pixels):
-            # Turn on single LED with bright green
-            pixels.fill((0, 0, 0))
-            pixels[i] = (0, 255, 0)  # Changed to pure green
-            pixels.brightness = 1.0   # Maximum brightness
-            pixels.show()
-            
-            # Wait for stable image
-            time.sleep(0.35)
-            
             image_points = []
-            for attempt in range(2):  # Capture two sets of images
-                if attempt == 1:
-                    time.sleep(10)  # Wait for 10 seconds before capturing the second set
-                    # Simulate moving the camera to a different position
-                    camera_params['cx'] += 10  # Adjust the principal point x for the second set
-                
-                # Capture frame
-                frame = camera.capture_array()
-                
-                # Convert frame to HSV for better green detection
+            for folder in ['data', 'data2']:
+                frame = cv2.imread(f"{folder}/debug_led_{i}.jpg")
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                
-                # Define green color range
-                lower_green = np.array([40, 100, 100])
-                upper_green = np.array([80, 255, 255])
-                
-                # Create mask for green pixels
                 mask = cv2.inRange(hsv, lower_green, upper_green)
-                
-                # Find contours in the mask
                 contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                
                 if contours:
-                    # Get largest contour
                     largest = max(contours, key=cv2.contourArea)
                     M = cv2.moments(largest)
                     if M["m00"] != 0:
                         cx = int(M["m10"] / M["m00"])
                         cy = int(M["m01"] / M["m00"])
                         image_points.append((cx, cy))
-                        
-                        # Save debug image with detection visualization
-                        cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
-                        cv2.imwrite(f"data/debug_led_{i}_attempt_{attempt}.jpg", frame)
             
             if len(image_points) == 2:
                 # Calculate 3D position
