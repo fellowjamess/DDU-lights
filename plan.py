@@ -50,9 +50,12 @@ def detect_led_position(frame, i):
     # cv2.imshow('Mask View', mask)
     # cv2.waitKey(1)
     
-    # Save the mask
-    if not os.path.exists('mask'):
-        os.makedirs('mask')
+    # Create folders if they don't exist
+    for folder in ['mask', 'contours']:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+    
+    # Save mask for each LED
     cv2.imwrite(f"mask/led_{i}_mask.jpg", mask)
 
 
@@ -66,6 +69,15 @@ def detect_led_position(frame, i):
         if M["m00"] != 0:
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
+            
+            # Draw contours on a copy of the frame
+            contour_image = frame.copy()
+            cv2.drawContours(contour_image, [largest], -1, (0, 255, 0), 2)
+            cv2.circle(contour_image, (cx, cy), 5, (0, 0, 255), -1)
+            
+            # Save the contour image
+            cv2.imwrite(f"contours/led_{i}_contour.jpg", contour_image)
+            
             return (cx, cy)
     return None
 
