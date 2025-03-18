@@ -17,7 +17,7 @@ def setup_camera():
     picam2 = Picamera2()
     preview_config = picam2.create_preview_configuration(
         main={"size": (1920, 1080)},
-        buffer_count=4
+        buffer_countW=4
     )
     picam2.configure(preview_config)
     picam2.start()
@@ -34,6 +34,11 @@ def detect_led_position(frame):
     
     # Create mask and find contours
     mask = cv2.inRange(hsv, lower, upper)
+    
+    # Show the mask in a window
+    cv2.imshow('Mask View', mask)
+    cv2.waitKey(1)  # Update the window
+    
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if contours:
