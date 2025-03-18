@@ -17,7 +17,7 @@ def setup_camera():
     picam2 = Picamera2()
     preview_config = picam2.create_preview_configuration(
         main={"size": (1920, 1080)},
-        buffer_countW=4
+        buffer_count=4
     )
     picam2.configure(preview_config)
     picam2.start()
