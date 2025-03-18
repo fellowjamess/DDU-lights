@@ -95,12 +95,16 @@ def main():
         
         # Scan each LED from first position
         for i in range(num_pixels):
+            # Turn all LEDs off and wait to ensure they're off
             pixels.fill((0, 0, 0))
+            pixels.show()
+            time.sleep(0.1)  # Wait for LEDs to fully turn off
+            
+            # Turn on single LED
             pixels[i] = (0, 255, 0)
             pixels.brightness = 1.0
             pixels.show()
-            
-            time.sleep(0.35)
+            time.sleep(0.35)  # Wait for LED to stabilize
             
             max_attempts = 3
             for attempt in range(max_attempts):
@@ -133,6 +137,10 @@ def main():
                 
                 if attempt < max_attempts - 1:
                     time.sleep(0.1)
+            
+            # Turn LED off after capture
+            pixels[i] = (0, 0, 0)
+            pixels.show()
         
         # Wait 5 seconds before second scan
         print("Waiting 5 seconds before second scan...")
@@ -145,12 +153,16 @@ def main():
         
         # Scan each LED from second position
         for i in range(num_pixels):
+            # Turn all LEDs off and wait to ensure they're off
             pixels.fill((0, 0, 0))
+            pixels.show()
+            time.sleep(0.1)  # Wait for LEDs to fully turn off
+            
+            # Turn on single LED
             pixels[i] = (0, 255, 0)
             pixels.brightness = 1.0
             pixels.show()
-            
-            time.sleep(0.35)
+            time.sleep(0.35)  # Wait for LED to stabilize
             
             for attempt in range(max_attempts):
                 frame = camera.capture_array()
@@ -179,6 +191,10 @@ def main():
                 
                 if attempt < max_attempts - 1:
                     time.sleep(0.1)
+            
+            # Turn LED off after capture
+            pixels[i] = (0, 0, 0)
+            pixels.show()
         
         # Calculate final positions using both scans
         for i in range(num_pixels):
