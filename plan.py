@@ -23,7 +23,7 @@ def setup_camera():
     picam2.start()
     return picam2
 
-def detect_led_position(frame):
+def detect_led_position(frame, i):
     # Convert to HSV for better LED detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
@@ -47,14 +47,13 @@ def detect_led_position(frame):
     mask = cv2.bitwise_or(cv2.bitwise_or(mask_red1, mask_red2), mask_yellow)
     
     # Show the mask
-    cv2.imshow('Mask View', mask)
-    cv2.waitKey(1)
+    # cv2.imshow('Mask View', mask)
+    # cv2.waitKey(1)
     
     # Save the mask
     if not os.path.exists('mask'):
         os.makedirs('mask')
-    for i in range(40):
-        cv2.imwrite(f"mask/led_{i}_mask.jpg", mask)
+    cv2.imwrite(f"mask/led_{i}_mask.jpg", mask)
 
 
     # Find contours
@@ -96,7 +95,7 @@ def capture_plan(camera, angle_name):
         
         # Capture and process frame
         frame = camera.capture_array()
-        position = detect_led_position(frame)
+        position = detect_led_position(frame, i)
         
         if position:
             led_positions.append((i, position[0], position[1]))
