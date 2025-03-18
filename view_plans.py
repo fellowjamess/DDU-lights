@@ -53,18 +53,18 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos in alpha_positions:
         led_id = int(pos[0])
-        # Shift coordinates to start from origin (0,0,0)
-        y = pos[1] - alpha_positions[0, 1]  # Subtract first LED y position
-        z = pos[2] - alpha_positions[0, 2]  # Subtract first LED z position
+        # Shift coordinates to start from origin (0,0,0) and ensure they're positive
+        y = abs(pos[1] - alpha_positions[0, 1])  # Make y position positive
+        z = abs(pos[2] - alpha_positions[0, 2])  # Make z position positive
         ax3.scatter(0, y, z, c='r', s=50)
         ax3.text(0, y, z, f'LED{led_id}')
 
     # For beta plane (XZ plane at y=0) - Perpendicular to alpha plane
     for pos in beta_positions:
         led_id = int(pos[0])
-        # Shift coordinates to start from origin (0,0,0)
-        x = pos[1] - beta_positions[0, 1]   # Subtract first LED x position
-        z = pos[2] - beta_positions[0, 2]   # Subtract first LED z position
+        # Shift coordinates to start from origin (0,0,0) and ensure they're positive
+        x = abs(pos[1] - beta_positions[0, 1])   # Make x position positive
+        z = abs(pos[2] - beta_positions[0, 2])   # Make z position positive
         ax3.scatter(x, 0, z, c='b', s=50)
         ax3.text(x, 0, z, f'LED{led_id}')
 
@@ -74,30 +74,30 @@ def main():
     ax3.set_zlabel('Z')
     ax3.set_title('3D View')
 
-    # Add semi-transparent planes to show the measurement planes
+    # Calculate positive max range
     max_range = max(
-        np.max(np.abs([pos[1] - alpha_positions[0, 1] for pos in alpha_positions])),
-        np.max(np.abs([pos[1] - beta_positions[0, 1] for pos in beta_positions])),
-        np.max(np.abs([pos[2] - alpha_positions[0, 2] for pos in alpha_positions])),
-        np.max(np.abs([pos[2] - beta_positions[0, 2] for pos in beta_positions]))
+        np.max([abs(pos[1] - alpha_positions[0, 1]) for pos in alpha_positions]),
+        np.max([abs(pos[1] - beta_positions[0, 1]) for pos in beta_positions]),
+        np.max([abs(pos[2] - alpha_positions[0, 2]) for pos in alpha_positions]),
+        np.max([abs(pos[2] - beta_positions[0, 2]) for pos in beta_positions])
     )
     
-    # Create grid for planes
-    xx, zz = np.meshgrid([-max_range, max_range], [-max_range, max_range])
+    # Create grid for planes (only positive values)
+    xx, zz = np.meshgrid([0, max_range], [0, max_range])
     
     # Alpha plane (YZ at x=0) - RED plane
     ax3.plot_surface(
         np.zeros_like(xx),  # x = 0 plane
-        xx,                 # y values
-        zz,                # z values
+        xx,                 # y values (positive only)
+        zz,                # z values (positive only)
         alpha=0.2, color='red'
     )
 
     # Beta plane (XZ at y=0) - BLUE plane
     ax3.plot_surface(
-        xx,                # x values
+        xx,                # x values (positive only)
         np.zeros_like(xx), # y = 0 plane
-        zz,                # z values
+        zz,                # z values (positive only)
         alpha=0.2, color='blue'
     )
 
@@ -107,10 +107,10 @@ def main():
     # Set the viewing angle to better show perpendicular planes
     ax3.view_init(elev=20, azim=45)
 
-    # Adjust plot limits to be symmetric around origin
-    ax3.set_xlim([-max_range, max_range])
-    ax3.set_ylim([-max_range, max_range])
-    ax3.set_zlim([-max_range, max_range])
+    # Adjust plot limits to show only positive values
+    ax3.set_xlim([0, max_range])
+    ax3.set_ylim([0, max_range])
+    ax3.set_zlim([0, max_range])
 
     # Add origin point
     ax3.scatter(0, 0, 0, c='k', s=100, marker='*', label='Origin (0,0,0)')
