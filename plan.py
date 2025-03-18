@@ -62,7 +62,8 @@ def capture_plan(camera, angle_name):
     for i in range(num_pixels):
         # Turn on only one LED
         pixels.fill((0, 0, 0))
-        pixels[i] = (255, 0, 0)
+        # First is green, second is red, third is blue
+        pixels[i] = (0, 255, 0)
         pixels.show()
         time.sleep(0.1)
         
