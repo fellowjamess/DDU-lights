@@ -53,16 +53,18 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos in alpha_positions:
         led_id = int(pos[0])
-        y = pos[1]
-        z = pos[2]
+        # Shift coordinates to start from origin (0,0,0)
+        y = pos[1] - alpha_positions[0, 1]  # Subtract first LED y position
+        z = pos[2] - alpha_positions[0, 2]  # Subtract first LED z position
         ax3.scatter(0, y, z, c='r', s=50)
         ax3.text(0, y, z, f'LED{led_id}')
 
-    # For beta plane (XZ plane at y=0) - CORRECTED to be perpendicular
+    # For beta plane (XZ plane at y=0) - Perpendicular to alpha plane
     for pos in beta_positions:
         led_id = int(pos[0])
-        x = pos[1]  # Using the x coordinate from beta view
-        z = pos[2]
+        # Shift coordinates to start from origin (0,0,0)
+        x = pos[1] - beta_positions[0, 1]   # Subtract first LED x position
+        z = pos[2] - beta_positions[0, 2]   # Subtract first LED z position
         ax3.scatter(x, 0, z, c='b', s=50)
         ax3.text(x, 0, z, f'LED{led_id}')
 
@@ -74,12 +76,15 @@ def main():
 
     # Add semi-transparent planes to show the measurement planes
     max_range = max(
-        np.max(np.abs(alpha_positions[:, 1:3])),
-        np.max(np.abs(beta_positions[:, 1:3]))
+        np.max(np.abs([pos[1] - alpha_positions[0, 1] for pos in alpha_positions])),
+        np.max(np.abs([pos[1] - beta_positions[0, 1] for pos in beta_positions])),
+        np.max(np.abs([pos[2] - alpha_positions[0, 2] for pos in alpha_positions])),
+        np.max(np.abs([pos[2] - beta_positions[0, 2] for pos in beta_positions]))
     )
+    
+    # Create grid for planes
     xx, zz = np.meshgrid([-max_range, max_range], [-max_range, max_range])
-    yy = np.zeros_like(xx)
-
+    
     # Alpha plane (YZ at x=0) - RED plane
     ax3.plot_surface(
         np.zeros_like(xx),  # x = 0 plane
@@ -102,10 +107,14 @@ def main():
     # Set the viewing angle to better show perpendicular planes
     ax3.view_init(elev=20, azim=45)
 
-    # Adjust plot limits to be symmetric
+    # Adjust plot limits to be symmetric around origin
     ax3.set_xlim([-max_range, max_range])
     ax3.set_ylim([-max_range, max_range])
     ax3.set_zlim([-max_range, max_range])
+
+    # Add origin point
+    ax3.scatter(0, 0, 0, c='k', s=100, marker='*', label='Origin (0,0,0)')
+    ax3.legend()
 
     # Adjust layout and display
     plt.tight_layout()
