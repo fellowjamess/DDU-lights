@@ -47,11 +47,11 @@ def detect_led_position(frame, i):
     #mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
     #mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
     #mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+    #mask_white = cv2.inRange(hsv, lower_white, upper_white)
     
     # Combine masks
     #mask = cv2.bitwise_or(cv2.bitwise_or(cv2.bitwise_or(mask_red1, mask_red2), mask_yellow), mask_white)
-    mask = cv2.bitwise_or(mask_white)
+    mask = cv2.inRange(hsv, lower_white, upper_white)
     
     # Show the mask
     # cv2.imshow('Mask View', mask)
