@@ -58,7 +58,7 @@ def main():
         ax3.scatter(0, y, z, c='r', s=50)
         ax3.text(0, y, z, f'LED{led_id}')
 
-    # For beta plane (XZ plane at y=0)
+    # For beta plane (XZ plane at y=0) - CORRECTED to be perpendicular
     for pos in beta_positions:
         led_id = int(pos[0])
         x = pos[1]  # Using the x coordinate from beta view
@@ -80,20 +80,32 @@ def main():
     xx, zz = np.meshgrid([-max_range, max_range], [-max_range, max_range])
     yy = np.zeros_like(xx)
 
-    # Alpha plane (YZ at x=0)
+    # Alpha plane (YZ at x=0) - RED plane
     ax3.plot_surface(
-        np.zeros_like(xx), xx, zz,
+        np.zeros_like(xx),  # x = 0 plane
+        xx,                 # y values
+        zz,                # z values
         alpha=0.2, color='red'
     )
 
-    # Beta plane (XZ at y=0)
+    # Beta plane (XZ at y=0) - BLUE plane
     ax3.plot_surface(
-        xx, np.zeros_like(xx), zz,
+        xx,                # x values
+        np.zeros_like(xx), # y = 0 plane
+        zz,                # z values
         alpha=0.2, color='blue'
     )
 
     # Set equal aspect ratio for 3D plot
     ax3.set_box_aspect([1, 1, 1])
+
+    # Set the viewing angle to better show perpendicular planes
+    ax3.view_init(elev=20, azim=45)
+
+    # Adjust plot limits to be symmetric
+    ax3.set_xlim([-max_range, max_range])
+    ax3.set_ylim([-max_range, max_range])
+    ax3.set_zlim([-max_range, max_range])
 
     # Adjust layout and display
     plt.tight_layout()
