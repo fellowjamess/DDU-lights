@@ -25,7 +25,9 @@ def setup_camera():
 
 def detect_led_position(frame, i):
     # Convert to HSV for better LED detection
-    hsv = cv2.cvtColor(frame, cv2.COLOR_GBR2HSV)
+    # Hmm, BGR and we use GBR for NeoPixel
+    # Is this a problem? Mabye, probably
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
     # GBR order for NeoPixel
     # Define ranges for red (requires two ranges due to how hue wraps around)
@@ -110,8 +112,9 @@ def capture_plan(camera, angle_name):
         time.sleep(0.1)
         
         # Capture and process frame
-        frame = camera.capture_array()
-        position = detect_led_position(frame, i)
+        frameRGB = camera.capture_array()
+        frameBGR = cv2.cvtColor(frameRGB, cv2.COLOR_RGB2BGR)
+        position = detect_led_position(frameBGR, i)
         
         if position:
             led_positions.append((i, position[0], position[1]))
