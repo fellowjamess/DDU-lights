@@ -28,8 +28,9 @@ def detect_led_position(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
     # Define range for bright LED
-    lower = np.array([40, 100, 100])  # Green HSV range
-    upper = np.array([80, 255, 255])  # Green HSV range
+    # First is green, second is blue, third is red
+    lower = np.array([100, 100, 40])  # Green HSV range
+    upper = np.array([255, 255, 80])  # Green HSV range
     
     # Create mask and find contours
     mask = cv2.inRange(hsv, lower, upper)
@@ -48,6 +49,7 @@ def capture_plan(camera, angle_name):
     positions = []
     
     # Turn on all LEDs
+    # With white, where first is green, second is blue, third is red
     pixels.fill((255, 255, 255))
     pixels.show()
     
@@ -62,7 +64,7 @@ def capture_plan(camera, angle_name):
     for i in range(num_pixels):
         # Turn on only one LED
         pixels.fill((0, 0, 0))
-        # First is green, second is red, third is blue
+        # First is green, second is blue, third is red
         pixels[i] = (0, 255, 0)
         pixels.show()
         time.sleep(0.1)
