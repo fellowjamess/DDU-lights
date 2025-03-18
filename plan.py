@@ -29,27 +29,29 @@ def detect_led_position(frame, i):
     
     # GBR order for NeoPixel
     # Define ranges for red (requires two ranges due to how hue wraps around)
-    lower_red1 = np.array([100, 0, 100])    # First red range (0-10)
-    upper_red1 = np.array([255, 10, 255])
-    lower_red2 = np.array([100, 160, 100])  # Second red range (160-180)
-    upper_red2 = np.array([255, 180, 255])
+    
+    #lower_red1 = np.array([100, 0, 100])    # First red range (0-10)
+    #upper_red1 = np.array([255, 10, 255])
+    #lower_red2 = np.array([100, 160, 100])  # Second red range (160-180)
+    #upper_red2 = np.array([255, 180, 255])
     
     # Define range for yellow
-    lower_yellow = np.array([100, 20, 100])  # Yellow range (20-30)
-    upper_yellow = np.array([255, 30, 255])
-
+    #lower_yellow = np.array([100, 20, 100])  # Yellow range (20-30)
+    #upper_yellow = np.array([255, 30, 255])
+    
     # Define range for white
     lower_white = np.array([0, 0, 200])  # White range (200-255)
     upper_white = np.array([255, 255, 255])
     
     # Create masks for each color
-    mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    #mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    #mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    #mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
     mask_white = cv2.inRange(hsv, lower_white, upper_white)
     
     # Combine masks
-    mask = cv2.bitwise_or(cv2.bitwise_or(cv2.bitwise_or(mask_red1, mask_red2), mask_yellow), mask_white)
+    #mask = cv2.bitwise_or(cv2.bitwise_or(cv2.bitwise_or(mask_red1, mask_red2), mask_yellow), mask_white)
+    mask = cv2.bitwise_or(mask_white)
     
     # Show the mask
     # cv2.imshow('Mask View', mask)
