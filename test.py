@@ -4,6 +4,7 @@ import numpy as np
 import time
 import board
 import neopixel
+import os
 
 # Camera setup
 def setup_camera():
@@ -80,6 +81,10 @@ def main():
     # Initialize arrays for storing coordinates
     valid_indices = []
     valid_positions = []
+
+    # Create data folder if it doesn't exist
+    if not os.path.exists('data'):
+        os.makedirs('data')
     
     try:
         # Scan each LED
@@ -132,7 +137,7 @@ def main():
                                 
                                 # Save debug image with detection visualization
                                 cv2.circle(frame, image_point, 5, (255, 0, 0), -1)
-                                cv2.imwrite(f"debug_led_{i}.jpg", frame)
+                                cv2.imwrite(f"data/debug_led_{i}.jpg", frame)
                                 break
                 
                 if attempt < max_attempts - 1:
@@ -152,11 +157,11 @@ def main():
         if valid_indices:
             valid_indices = np.array(valid_indices)
             valid_positions = np.array(valid_positions)
-            np.savez("led_coordinates.npz", 
+            np.savez("data/led_coordinates.npz", 
                     indices=valid_indices, 
                     positions=valid_positions)
             print(f"Saved {len(valid_indices)} valid LED positions")
-            print("Coordinates saved to led_coordinates.npz")
+            print("Coordinates saved to data/led_coordinates.npz")
         else:
             print("No valid LED positions detected")
 

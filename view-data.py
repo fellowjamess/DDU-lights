@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the coordinates
-data = np.load('led_coordinates.npz')
+data = np.load('data/led_coordinates.npz')
 indices = data['indices']
 positions = data['positions']
 
