@@ -10,7 +10,7 @@ import os
 def setup_camera():
     picam2 = Picamera2()
     preview_config = picam2.create_preview_configuration(
-        main={"size": (1280, 720)},  # Higher resolution for better accuracy
+        main={"size": (1920, 1080)},  # Higher resolution for better accuracy
         buffer_count=4
     )
     picam2.configure(preview_config)
@@ -96,7 +96,7 @@ def main():
             pixels.show()
             
             # Wait for stable image
-            time.sleep(0.5)
+            time.sleep(0.35)
             
             # Multiple attempts to detect LED
             max_attempts = 3
@@ -141,7 +141,7 @@ def main():
                                 break
                 
                 if attempt < max_attempts - 1:
-                    time.sleep(0.2)
+                    time.sleep(0.1)
     
     except KeyboardInterrupt:
         print("Scanning interrupted")
