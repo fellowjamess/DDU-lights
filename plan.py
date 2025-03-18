@@ -29,15 +29,24 @@ def detect_led_position(frame):
     
     # Define range for bright LED
     # First is green, second is blue, third is red
-    lower = np.array([100, 100, 40])  # Green HSV range
-    upper = np.array([255, 255, 80])  # Green HSV range
+    lower = np.array([40, 100, 100])  # Adjusted Green HSV range
+    upper = np.array([80, 255, 255])  # Adjusted Green HSV range
     
     # Create mask and find contours
     mask = cv2.inRange(hsv, lower, upper)
     
-    # Show the mask in a window
-    cv2.imshow('Mask View', mask)
-    cv2.waitKey(1)  # Update the window
+    try:
+        # Create and show the mask window
+        cv2.namedWindow('Mask View', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Mask View', 640, 480)
+        cv2.imshow('Mask View', mask)
+        key = cv2.waitKey(1) & 0xFF  # Update the window and handle key press
+        
+        if key == 27:  # ESC key
+            cv2.destroyAllWindows()
+            return None
+    except:
+        pass  # If window already exists or other CV2 error
     
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     

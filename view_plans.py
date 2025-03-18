@@ -67,6 +67,9 @@ def main():
     finally:
         # Clean up
         cv2.destroyAllWindows()  # Close all OpenCV windows
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        camera.stop()
 
 if __name__ == "__main__":
     main()
