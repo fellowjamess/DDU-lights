@@ -91,31 +91,35 @@ def detect_led_position(frame, i):
     return None
 
 def capture_plan(camera, angle_name):
-    # positions = []
-    
-    # Turn on all LEDs
-    # GBR order for NeoPixel
-    pixels.fill((0, 0, 255))  # Set to red
+    # First ensure all LEDs are off
+    pixels.fill((0, 0, 0))
     pixels.show()
+    time.sleep(0.2)  # Wait for LEDs to fully turn off
     
-    # Wait for stable image
-    time.sleep(1)
-        
     # Process frame
     led_positions = []
+    frameBGR = None  # Store the last frame for annotation
+    
     for i in range(num_pixels):
-        # Turn on only one LED, so make all LEDs off first
+        # Double-check all LEDs are off
         pixels.fill((0, 0, 0))
-        time.sleep(0.2)
-        # GBR order for NeoPixel
-        pixels[i] = (0, 0, 255)  # Set each individual LED to red
         pixels.show()
-        time.sleep(0.1)
+        time.sleep(0.2)  # Wait for LEDs to fully turn off
+        
+        # Turn on single LED with red color (GBR order)
+        pixels[i] = (0, 0, 255)
+        pixels.brightness = 1.0  # Ensure full brightness
+        pixels.show()
+        time.sleep(0.3)  # Wait for LED to fully turn on and stabilize
         
         # Capture and process frame
         frameRGB = camera.capture_array()
         frameBGR = cv2.cvtColor(frameRGB, cv2.COLOR_RGB2BGR)
         position = detect_led_position(frameBGR, i)
+        
+        # Turn off LED immediately after capture
+        pixels[i] = (0, 0, 0)
+        pixels.show()
         
         if position:
             led_positions.append((i, position[0], position[1]))
@@ -123,10 +127,16 @@ def capture_plan(camera, angle_name):
             cv2.circle(frameBGR, position, 5, (0, 255, 0), -1)
     
     # Save annotated frame
-    cv2.imwrite(f"plan_{angle_name}.jpg", frameBGR)
+    if frameBGR is not None:
+        cv2.imwrite(f"plan_{angle_name}.jpg", frameBGR)
     
     # Save coordinates
     np.save(f"plan_{angle_name}.npy", np.array(led_positions))
+    
+    # Ensure all LEDs are off before returning
+    pixels.fill((0, 0, 0))
+    pixels.show()
+    
     return led_positions
 
 def main():
