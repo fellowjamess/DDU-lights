@@ -62,7 +62,7 @@ def capture_plan(camera, angle_name):
     for i in range(num_pixels):
         # Turn on only one LED
         pixels.fill((0, 0, 0))
-        pixels[i] = (255, 255, 255)
+        pixels[i] = (255, 0, 0)
         pixels.show()
         time.sleep(0.1)
         
@@ -73,7 +73,7 @@ def capture_plan(camera, angle_name):
         if position:
             led_positions.append((i, position[0], position[1]))
             # Draw detection on frame
-            cv2.circle(frame, position, 5, (0, 255, 0), -1)
+            cv2.circle(frame, position, 5, (0, 0, 255), -1)
     
     # Save annotated frame
     cv2.imwrite(f"plan_{angle_name}.jpg", frame)
