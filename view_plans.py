@@ -49,15 +49,37 @@ def main():
         ax2.annotate(f'LED{int(pos[0])}', (pos[1], pos[2]))
     ax2.set_title('Beta Plan (90°)')
 
+    # Store matched LED coordinates
+    matched_leds = {}
+
     # Create 3D visualization
     # For alpha plane (YZ plane at x=0)
-    for pos in alpha_positions:
-        led_id = int(pos[0])
-        # Shift coordinates to start from origin (0,0,0) and ensure they're positive
-        y = abs(pos[1] - alpha_positions[0, 1])  # Make y position positive
-        z = abs(pos[2] - alpha_positions[0, 2])  # Make z position positive
-        ax3.scatter(0, y, z, c='r', s=50)
-        ax3.text(0, y, z, f'LED{led_id}')
+    for pos_alpha in alpha_positions:
+        led_id_alpha = int(pos_alpha[0])
+        y_alpha = abs(pos_alpha[1] - alpha_positions[0, 1])
+        z_alpha = abs(pos_alpha[2] - alpha_positions[0, 2])
+        
+        # Look for matching LED in beta positions
+        for pos_beta in beta_positions:
+            led_id_beta = int(pos_beta[0])
+            if led_id_alpha == led_id_beta:
+                x_beta = abs(pos_beta[1] - beta_positions[0, 1])
+                z_beta = abs(pos_beta[2] - beta_positions[0, 2])
+                
+                # Store 3D coordinates (using z_alpha as it should match z_beta)
+                matched_leds[led_id_alpha] = (x_beta, y_alpha, z_alpha)
+                
+                # Draw perpendicular lines
+                # Line from alpha plane
+                ax3.plot([0, x_beta], [y_alpha, y_alpha], [z_alpha, z_alpha], 
+                        'g--', alpha=0.5)
+                # Line from beta plane
+                ax3.plot([x_beta, x_beta], [0, y_alpha], [z_beta, z_beta], 
+                        'g--', alpha=0.5)
+                
+                # Plot intersection point
+                ax3.scatter(x_beta, y_alpha, z_alpha, c='g', s=100)
+                ax3.text(x_beta, y_alpha, z_alpha, f'LED{led_id_alpha}')
 
     # For beta plane (XZ plane at y=0) - Perpendicular to alpha plane
     for pos in beta_positions:
@@ -114,6 +136,19 @@ def main():
 
     # Add origin point
     ax3.scatter(0, 0, 0, c='k', s=100, marker='*', label='Origin (0,0,0)')
+    ax3.legend()
+
+    # Save 3D coordinates to text file
+    with open('led_3d_coordinates.txt', 'w') as f:
+        f.write("LED ID, X, Y, Z\n")
+        for led_id, coords in sorted(matched_leds.items()):
+            f.write(f"LED {led_id}: ({coords[0]:.2f}, {coords[1]:.2f}, {coords[2]:.2f})\n")
+
+    # Add legend entry for intersection points
+    ax3.scatter([], [], [], c='g', s=100, label='LED Intersections')
+    ax3.plot([], [], 'g--', label='Perpendicular Lines')
+    
+    # Update legend
     ax3.legend()
 
     # Adjust layout and display
