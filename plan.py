@@ -119,10 +119,10 @@ def capture_plan(camera, angle_name):
         if position:
             led_positions.append((i, position[0], position[1]))
             # Draw detection on frame
-            cv2.circle(frame, position, 5, (0, 255, 0), -1)
+            cv2.circle(frameBGR, position, 5, (0, 255, 0), -1)
     
     # Save annotated frame
-    cv2.imwrite(f"plan_{angle_name}.jpg", frame)
+    cv2.imwrite(f"plan_{angle_name}.jpg", frameBGR)
     
     # Save coordinates
     np.save(f"plan_{angle_name}.npy", np.array(led_positions))
