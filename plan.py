@@ -27,16 +27,29 @@ def detect_led_position(frame):
     # Convert to HSV for better LED detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # Define range for bright LED
-    # First is green, second is blue, third is red
-    lower = np.array([100, 100, 40])  # Green HSV range
-    upper = np.array([255, 255, 80])  # Green HSV range
+    # Define ranges for red (requires two ranges due to how hue wraps around)
+    lower_red1 = np.array([0, 100, 100])    # First red range (0-10)
+    upper_red1 = np.array([10, 255, 255])
+    lower_red2 = np.array([160, 100, 100])  # Second red range (160-180)
+    upper_red2 = np.array([180, 255, 255])
     
-    # Create mask and find contours
-    mask = cv2.inRange(hsv, lower, upper)
+    # Define range for yellow
+    lower_yellow = np.array([20, 100, 100])  # Yellow range (20-30)
+    upper_yellow = np.array([30, 255, 255])
+    
+    # Create masks for each color
+    mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    
+    # Combine masks
+    mask = cv2.bitwise_or(cv2.bitwise_or(mask_red1, mask_red2), mask_yellow)
+    
+    # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if contours:
+        # Get largest contour
         largest = max(contours, key=cv2.contourArea)
         M = cv2.moments(largest)
         if M["m00"] != 0:
@@ -49,8 +62,7 @@ def capture_plan(camera, angle_name):
     positions = []
     
     # Turn on all LEDs
-    # With white, where first is green, second is blue, third is red
-    pixels.fill((255, 255, 255))
+    pixels.fill((255, 0, 0))  # Set to red
     pixels.show()
     
     # Wait for stable image
@@ -64,8 +76,7 @@ def capture_plan(camera, angle_name):
     for i in range(num_pixels):
         # Turn on only one LED
         pixels.fill((0, 0, 0))
-        # First is green, second is blue, third is red
-        pixels[i] = (0, 255, 0)
+        pixels[i] = (255, 0, 0)  # Set each individual LED to red
         pixels.show()
         time.sleep(0.1)
         
@@ -76,7 +87,7 @@ def capture_plan(camera, angle_name):
         if position:
             led_positions.append((i, position[0], position[1]))
             # Draw detection on frame
-            cv2.circle(frame, position, 5, (0, 0, 255), -1)
+            cv2.circle(frame, position, 5, (0, 255, 0), -1)
     
     # Save annotated frame
     cv2.imwrite(f"plan_{angle_name}.jpg", frame)
