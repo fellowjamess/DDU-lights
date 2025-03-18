@@ -53,7 +53,8 @@ def detect_led_position(frame):
     # Save the mask
     if not os.path.exists('mask'):
         os.makedirs('mask')
-    cv2.imwrite(f"mask/led_{led_index}_mask.jpg", mask)
+    for i in range(40):
+        cv2.imwrite(f"mask/led_{i}_mask.jpg", mask)
 
 
     # Find contours
