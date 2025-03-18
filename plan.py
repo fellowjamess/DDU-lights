@@ -82,7 +82,7 @@ def detect_led_position(frame, i):
     return None
 
 def capture_plan(camera, angle_name):
-    positions = []
+    # positions = []
     
     # Turn on all LEDs
     # GBR order for NeoPixel
@@ -91,10 +91,7 @@ def capture_plan(camera, angle_name):
     
     # Wait for stable image
     time.sleep(1)
-    
-    # Capture frame
-    frame = camera.capture_array()
-    
+        
     # Process frame
     led_positions = []
     for i in range(num_pixels):
