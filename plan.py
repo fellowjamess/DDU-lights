@@ -28,8 +28,8 @@ def detect_led_position(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
     # Define range for bright LED
-    lower = np.array([0, 0, 200])
-    upper = np.array([180, 30, 255])
+    lower = np.array([40, 100, 100])  # Green HSV range
+    upper = np.array([80, 255, 255])  # Green HSV range
     
     # Create mask and find contours
     mask = cv2.inRange(hsv, lower, upper)
