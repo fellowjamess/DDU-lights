@@ -103,6 +103,8 @@ def main():
             for attempt in range(2):  # Capture two sets of images
                 if attempt == 1:
                     time.sleep(10)  # Wait for 10 seconds before capturing the second set
+                    # Simulate moving the camera to a different position
+                    camera_params['cx'] += 10  # Adjust the principal point x for the second set
                 
                 # Capture frame
                 frame = camera.capture_array()
