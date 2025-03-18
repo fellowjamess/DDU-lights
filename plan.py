@@ -104,6 +104,7 @@ def capture_plan(camera, angle_name):
     # Process frame
     led_positions = []
     for i in range(num_pixels):
+        time.sleep(0.2)
         # Turn on only one LED
         pixels.fill((0, 0, 0))
         # GBR order for NeoPixel
