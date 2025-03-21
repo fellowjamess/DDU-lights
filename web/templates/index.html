@@ -66,6 +66,34 @@
             background-color: #e0e0e0;
             border-radius: 5px;
         }
+
+        .animation-control {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        #rainStart, #rainStop {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        #rainStop {
+            background-color: #ff9999;
+        }
+        
+        #rainStart {
+            background-color: #99ff99;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -78,6 +106,13 @@
                 <div class="control-row">
                     <input type="color" id="all-color" value="#000000">
                     <button onclick="updateAll()">Update All</button>
+                </div>
+            </div>
+            <div class="animation-control">
+                <h3>Rain Animation</h3>
+                <div class="control-row">
+                    <button onclick="startRain()" id="rainStart">Start Rain</button>
+                    <button onclick="stopRain()" id="rainStop">Stop Rain</button>
                 </div>
             </div>
             <div class="controls-grid" id="individual-controls"></div>
@@ -206,6 +241,66 @@
                   }
               });
         }
+
+        function startRain() {
+            document.getElementById('rainStart').disabled = true;
+            document.getElementById('rainStop').disabled = false;
+            
+            fetch('/animation/start_rain', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  if (!data.success) {
+                      console.error('Failed to start animation:', data.message);
+                      document.getElementById('rainStart').disabled = false;
+                      document.getElementById('rainStop').disabled = true;
+                  }
+              });
+        }
+
+        function stopRain() {
+            document.getElementById('rainStart').disabled = false;
+            document.getElementById('rainStop').disabled = true;
+            
+            fetch('/animation/stop_rain', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      // Reset all LED visualizations
+                      Object.values(lights).forEach(light => {
+                          light.material.color.set(new THREE.Color(0x000000));
+                          light.material.emissive.set(new THREE.Color(0x000000));
+                          light.material.needsUpdate = true;
+                      });
+                  } else {
+                      console.error('Failed to stop animation:', data.message);
+                      document.getElementById('rainStart').disabled = true;
+                      document.getElementById('rainStop').disabled = false;
+                  }
+              });
+        }
+
+        // Add WebSocket connection for real-time updates
+        const socket = new WebSocket(`ws://${window.location.hostname}:5000/ws`);
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'led_update') {
+                const light = lights[data.id];
+                if (light) {
+                    const color = new THREE.Color(data.color);
+                    light.material.color.set(color);
+                    light.material.emissive.set(color);
+                    light.material.needsUpdate = true;
+                }
+            }
+        };
 
         // Initialize everything
         init();

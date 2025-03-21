@@ -4,6 +4,9 @@ import board
 import neopixel
 import json
 import os
+import threading
+import time
+import random
 
 app = Flask(__name__)
 
@@ -53,6 +56,9 @@ except Exception as e:
 
 print(led_positions)
 
+animation_thread = None
+animation_running = False
+
 @app.route('/')
 def home():
     return render_template('index.html', led_positions=json.dumps(led_positions))
@@ -93,6 +99,65 @@ def update_all():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+def rain_animation():
+    global animation_running
+    while animation_running:
+        # Sort LEDs by height (z coordinate)
+        sorted_leds = sorted(led_positions, key=lambda x: x['z'], reverse=True)
+        
+        # Create rain drop
+        active_leds = []
+        for led in sorted_leds:
+            # Add new drop
+            led_id = led['id']
+            # Blue color in GBR format
+            pixels[led_id] = (0, 255, 0)
+            active_leds.append(led_id)
+            pixels.show()
+            
+            # Wait a bit
+            time.sleep(0.05)
+            
+            # Turn off previous LED if it's not the bottom one
+            if len(active_leds) > 3:  # Keep 3 LEDs lit as trail
+                old_led = active_leds.pop(0)
+                pixels[old_led] = (0, 0, 0)
+                pixels.show()
+        
+        # Turn off remaining LEDs
+        for led_id in active_leds:
+            pixels[led_id] = (0, 0, 0)
+            pixels.show()
+            time.sleep(0.05)
+        
+        # Small pause between drops
+        time.sleep(random.uniform(0.1, 0.5))
+
+@app.route('/animation/start_rain', methods=['POST'])
+def start_rain():
+    global animation_thread, animation_running
+    if not animation_running:
+        animation_running = True
+        animation_thread = threading.Thread(target=rain_animation)
+        animation_thread.start()
+        return jsonify({"success": True, "message": "Rain animation started"})
+    return jsonify({"success": False, "message": "Animation already running"})
+
+@app.route('/animation/stop_rain', methods=['POST'])
+def stop_rain():
+    global animation_running
+    if animation_running:
+        animation_running = False
+        # Wait for thread to finish
+        if animation_thread:
+            animation_thread.join()
+        # Turn off all LEDs
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        return jsonify({"success": True, "message": "Rain animation stopped"})
+    return jsonify({"success": False, "message": "No animation running"})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
