@@ -56,40 +56,37 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos_alpha in alpha_positions:
         led_id_alpha = int(pos_alpha[0])
-        # Convert from image coordinates to Three.js coordinates
-        y = (pos_alpha[1] - alpha_positions[0, 1]) / 1920  # Normalize by image width
-        z = (pos_alpha[2] - alpha_positions[0, 2]) / 1080  # Normalize by image height
+        # Normalize coordinates relative to first LED
+        y = (pos_alpha[1] - alpha_positions[0, 1]) / 1920
+        z = (pos_alpha[2] - alpha_positions[0, 2]) / 1080
+        
+        # Plot point on YZ plane (alpha)
+        ax3.scatter(0, y, z, c='r', s=50)
+        ax3.text(0, y, z, f'LED{led_id_alpha}')
         
         # Look for matching LED in beta positions
         for pos_beta in beta_positions:
             led_id_beta = int(pos_beta[0])
             if led_id_alpha == led_id_beta:
-                # Convert beta coordinates
-                x = (pos_beta[1] - beta_positions[0, 1]) / 1920  # Normalize x coordinate
-                z_beta = (pos_beta[2] - beta_positions[0, 2]) / 1080  # Use for averaging z
+                # Convert beta coordinates (now on XZ plane)
+                x = (pos_beta[1] - beta_positions[0, 1]) / 1920
+                z_beta = (pos_beta[2] - beta_positions[0, 2]) / 1080
                 
-                # Average the z coordinates from both views
-                z_final = (z + z_beta) / 2
+                # Plot point on XZ plane (beta)
+                ax3.scatter(x, 0, z_beta, c='b', s=50)
+                ax3.text(x, 0, z_beta, f'LED{led_id_beta}')
                 
-                # Store normalized coordinates between 0 and 1
+                # Store matched coordinates
                 matched_leds[led_id_alpha] = {
                     "id": led_id_alpha,
                     "x": float(x),
                     "y": float(y),
-                    "z": float(z_final)
+                    "z": float((z + z_beta) / 2)  # Average Z coordinates
                 }
                 
-                # Plot intersection point
-                ax3.scatter(x, y, z_final, c='g', s=100)
-                ax3.text(x, y, z_final, f'LED{led_id_alpha}')
-
-    # For beta plane (XZ plane at y=0)
-    for pos in beta_positions:
-        led_id = int(pos[0])
-        x = abs(pos[1] - beta_positions[0, 1])
-        z = abs(pos[2] - beta_positions[0, 2])
-        ax3.scatter(x, 0, z, c='b', s=50)
-        ax3.text(x, 0, z, f'LED{led_id}')
+                # Plot intersection point in green
+                ax3.scatter(x, y, (z + z_beta) / 2, c='g', s=100)
+                ax3.text(x, y, (z + z_beta) / 2, f'LED{led_id_alpha}')
 
     # Customize 3D plot
     ax3.set_xlabel('X')
