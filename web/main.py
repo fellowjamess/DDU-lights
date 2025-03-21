@@ -18,7 +18,7 @@ pixels = neopixel.NeoPixel(
 try:
     # Get parent directory path
     parent_dir = os.path.dirname(os.path.dirname(__file__))
-    coord_file = os.path.join(parent_dir, 'led_3d_coordinates.txt')
+    coord_file = os.path.join(parent_dir, 'data/led_3d_coordinates.txt')
     
     # Read coordinates from file
     with open(coord_file, 'r') as f:

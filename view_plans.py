@@ -37,7 +37,7 @@ def main():
 
     # Plot beta plan (90 degrees)
     try:
-        img_beta = cv2.imread('plan_beta.jpg')
+        img_beta = cv2.imread('data/plan_beta.jpg')  # Updated path to include data folder
         if img_beta is not None:
             img_beta = cv2.cvtColor(img_beta, cv2.COLOR_BGR2RGB)
             ax2.imshow(img_beta)
@@ -56,22 +56,32 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos_alpha in alpha_positions:
         led_id_alpha = int(pos_alpha[0])
-        y_alpha = abs(pos_alpha[1] - alpha_positions[0, 1])
-        z_alpha = abs(pos_alpha[2] - alpha_positions[0, 2])
+        # Convert from image coordinates to Three.js coordinates
+        y = (pos_alpha[1] - alpha_positions[0, 1]) / 1920  # Normalize by image width
+        z = (pos_alpha[2] - alpha_positions[0, 2]) / 1080  # Normalize by image height
         
         # Look for matching LED in beta positions
         for pos_beta in beta_positions:
             led_id_beta = int(pos_beta[0])
             if led_id_alpha == led_id_beta:
-                x_beta = abs(pos_beta[1] - beta_positions[0, 1])
-                z_beta = abs(pos_beta[2] - beta_positions[0, 2])
+                # Convert beta coordinates
+                x = (pos_beta[1] - beta_positions[0, 1]) / 1920  # Normalize x coordinate
+                z_beta = (pos_beta[2] - beta_positions[0, 2]) / 1080  # Use for averaging z
                 
-                # Store 3D coordinates (using z_alpha as it should match z_beta)
-                matched_leds[led_id_alpha] = (x_beta, y_alpha, z_alpha)
+                # Average the z coordinates from both views
+                z_final = (z + z_beta) / 2
+                
+                # Store normalized coordinates between 0 and 1
+                matched_leds[led_id_alpha] = {
+                    "id": led_id_alpha,
+                    "x": float(x),
+                    "y": float(y),
+                    "z": float(z_final)
+                }
                 
                 # Plot intersection point
-                ax3.scatter(x_beta, y_alpha, z_alpha, c='g', s=100)
-                ax3.text(x_beta, y_alpha, z_alpha, f'LED{led_id_alpha}')
+                ax3.scatter(x, y, z_final, c='g', s=100)
+                ax3.text(x, y, z_final, f'LED{led_id_alpha}')
 
     # For beta plane (XZ plane at y=0)
     for pos in beta_positions:
@@ -132,8 +142,9 @@ def main():
     # Save 3D coordinates to text file in data folder
     with open('data/led_3d_coordinates.txt', 'w') as f:
         f.write("LED ID, X, Y, Z\n")
-        for led_id, coords in sorted(matched_leds.items()):
-            f.write(f"LED {led_id}: ({coords[0]:.2f}, {coords[1]:.2f}, {coords[2]:.2f})\n")
+        for led_data in sorted(matched_leds.items()):
+            led = led_data[1]  # Get the dictionary of coordinates
+            f.write(f"LED {led['id']}: ({led['x']:.2f}, {led['y']:.2f}, {led['z']:.2f})\n")
 
     # Add legend entry for intersection points
     ax3.scatter([], [], [], c='g', s=100, label='LED Intersections')

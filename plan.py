@@ -27,19 +27,12 @@ def detect_led_position(frame, i, angle_name):
     # Convert to HSV for better LED detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # GBR order for NeoPixel
-    # Define ranges for red (requires two ranges due to how hue wraps around)
-    lower_red1 = np.array([0, 100, 100])    # First red range
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 100, 100])  # Second red range
-    upper_red2 = np.array([180, 255, 255])
+    # GBR order for NeoPixel - Blue detection
+    lower_blue = np.array([100, 100, 100])  # Blue HSV range
+    upper_blue = np.array([140, 255, 255])  # Blue HSV range
     
-    # Create masks for red color
-    mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    
-    # Combine red masks
-    mask = cv2.bitwise_or(mask_red1, mask_red2)
+    # Create mask for blue color
+    mask = cv2.inRange(hsv, lower_blue, upper_blue)
     
     # Create data folder and subfolders
     if not os.path.exists('data'):
@@ -91,8 +84,8 @@ def capture_plan(camera, angle_name):
         pixels.show()
         time.sleep(0.2)
         
-        # Turn on single LED with red color
-        pixels[i] = (0, 0, 255)  # Red in GBR format
+        # Turn on single LED with blue color (GBR format)
+        pixels[i] = (0, 255, 0)  # Blue in GBR format (0=Green, 255=Blue, 0=Red)
         pixels.brightness = 1.0
         pixels.show()
         time.sleep(0.3)
