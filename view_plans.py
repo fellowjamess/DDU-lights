@@ -37,7 +37,7 @@ def main():
 
     # Plot beta plan (90 degrees)
     try:
-        img_beta = cv2.imread('plan_beta.jpg')
+        img_beta = cv2.imread('data/plan_beta.jpg')  # Updated path to include data folder
         if img_beta is not None:
             img_beta = cv2.cvtColor(img_beta, cv2.COLOR_BGR2RGB)
             ax2.imshow(img_beta)
