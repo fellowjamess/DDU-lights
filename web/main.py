@@ -22,24 +22,36 @@ try:
     
     # Read coordinates from file
     with open(coord_file, 'r') as f:
-        lines = f.readlines()
+        lines = f.readlines()[1:]  # Skip header line
     
     led_positions = []
-    for idx, line in enumerate(lines):
+    for line in lines:
         try:
-            parts = line.strip().split(',')
-            if len(parts) == 3:
-                led_positions.append({
-                    "id": idx,
-                    "x": parts[0],
-                    "y": parts[1],
-                    "z": parts[2]
-                })
-        except ValueError:
-            print(f"Skipping invalid coordinate at line {idx + 1}")
+            # Parse line like "LED 0: (1.23, 4.56, 7.89)"
+            parts = line.split(':')
+            led_id = int(parts[0].replace('LED', '').strip())
+            
+            # Extract coordinates from parentheses and split
+            coords = parts[1].strip()[1:-1].split(',')  # Remove () and split
+            x = float(coords[0].strip())
+            y = float(coords[1].strip())
+            z = float(coords[2].strip())
+            
+            led_positions.append({
+                "id": led_id,
+                "x": x,
+                "y": y,
+                "z": z
+            })
+        except (ValueError, IndexError) as e:
+            print(f"Error parsing line '{line}': {e}")
+            continue
+            
 except Exception as e:
     print(f"Error loading LED coordinates: {e}")
     led_positions = []  # Fallback if no position data exists
+
+print(led_positions)
 
 @app.route('/')
 def home():
