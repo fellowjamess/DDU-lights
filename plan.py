@@ -85,7 +85,7 @@ def capture_plan(camera, angle_name):
         time.sleep(0.2)
         
         # Turn on single LED with blue color (GBR format)
-        pixels[i] = (255, 0, 0)  # Blue in GBR format (255=Blue, 0=Green, 0=Red)
+        pixels[i] = (0, 255, 0)  # Blue in GBR format (0=Green, 255=Blue, 0=Red)
         pixels.brightness = 1.0
         pixels.show()
         time.sleep(0.3)
