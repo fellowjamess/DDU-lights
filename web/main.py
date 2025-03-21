@@ -3,6 +3,7 @@ import numpy as np
 import board
 import neopixel
 import json
+import os
 
 app = Flask(__name__)
 
@@ -15,12 +16,25 @@ pixels = neopixel.NeoPixel(
 
 # Load LED positions from saved data
 try:
-    data = np.load('position/led_coordinates.npz')
-    led_positions = [
-        {"id": int(idx), "x": float(pos[0]), "y": float(pos[1]), "z": float(pos[2])}
-        for idx, pos in zip(data['indices'], data['positions'])
-    ]
-except:
+    # Get parent directory path
+    parent_dir = os.path.dirname(os.path.dirname(__file__))
+    coord_file = os.path.join(parent_dir, 'led_3d_coordinates.txt')
+    
+    # Read coordinates from file
+    with open(coord_file, 'r') as f:
+        lines = f.readlines()
+    
+    led_positions = []
+    for idx, line in enumerate(lines):
+        x, y, z = map(float, line.strip().split(','))
+        led_positions.append({
+            "id": idx,
+            "x": x,
+            "y": y,
+            "z": z
+        })
+except Exception as e:
+    print(f"Error loading LED coordinates: {e}")
     led_positions = []  # Fallback if no position data exists
 
 @app.route('/')
