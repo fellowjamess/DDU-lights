@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Christmas Tree Lights</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <style>
+        body { margin: 0; }
+        #container { 
+            display: flex;
+            height: 100vh;
+        }
+        #three-container { 
+            flex: 2;
+            position: relative;
+        }
+        #controls {
+            flex: 1;
+            padding: 20px;
+            background: #f0f0f0;
+            overflow-y: auto;
+        }
+        .led-control {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="three-container"></div>
+        <div id="controls">
+            <h2>LED Controls</h2>
+            <div class="led-control">
+                <h3>All LEDs</h3>
+                <input type="color" id="all-color" value="#000000">
+                <button onclick="updateAll()">Update All</button>
+            </div>
+            <div id="individual-controls"></div>
+        </div>
+    </div>
+
+    <script>
+        const ledPositions = {{ led_positions|safe }};
+        let scene, camera, renderer, lights = [];
+
+        function init() {
+            // Setup Three.js scene
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / 2 / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth / 2, window.innerHeight);
+            document.getElementById('three-container').appendChild(renderer.domElement);
+
+            // Add ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            // Create LED representations
+            ledPositions.forEach(pos => {
+                const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+                const material = new THREE.MeshPhongMaterial({ color: 0x000000 });
+                const light = new THREE.Mesh(geometry, material);
+                light.position.set(pos.x, pos.y, pos.z);
+                scene.add(light);
+                lights[pos.id] = light;
+
+                // Create individual LED controls
+                const control = document.createElement('div');
+                control.className = 'led-control';
+                control.innerHTML = `
+                    <h3>LED ${pos.id}</h3>
+                    <input type="color" id="color-${pos.id}" value="#000000">
+                    <button onclick="updateLED(${pos.id})">Update</button>
+                `;
+                document.getElementById('individual-controls').appendChild(control);
+            });
+
+            camera.position.z = 5;
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        function updateLED(id) {
+            const color = document.getElementById(`color-${id}`).value;
+            fetch('/update_led', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: id,
+                    color: color
+                })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      lights[id].material.color.setStyle(color);
+                  }
+              });
+        }
+
+        function updateAll() {
+            const color = document.getElementById('all-color').value;
+            fetch('/update_all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    color: color
+                })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      Object.values(lights).forEach(light => {
+                          light.material.color.setStyle(color);
+                      });
+                  }
+              });
+        }
+
+        // Initialize everything
+        init();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / 2 / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth / 2, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
