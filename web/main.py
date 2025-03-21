@@ -26,13 +26,17 @@ try:
     
     led_positions = []
     for idx, line in enumerate(lines):
-        x, y, z = map(float, line.strip().split(','))
-        led_positions.append({
-            "id": idx,
-            "x": x,
-            "y": y,
-            "z": z
-        })
+        try:
+            parts = line.strip().split(',')
+            if len(parts) == 3:
+                led_positions.append({
+                    "id": idx,
+                    "x": parts[0],
+                    "y": parts[1],
+                    "z": parts[2]
+                })
+        except ValueError:
+            print(f"Skipping invalid coordinate at line {idx + 1}")
 except Exception as e:
     print(f"Error loading LED coordinates: {e}")
     led_positions = []  # Fallback if no position data exists
@@ -47,11 +51,14 @@ def update_led():
     led_id = data.get('id')
     color = data.get('color', '#000000').lstrip('#')
     
-    # Convert hex color to RGB
-    rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-    
+    # Convert hex color to RGB first, then rearrange to GBR
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    gbr = (g, b, r)  # Rearrange to GBR order
+
     try:
-        pixels[led_id] = rgb
+        pixels[led_id] = gbr
         pixels.show()
         return jsonify({"success": True})
     except Exception as e:
@@ -61,10 +68,15 @@ def update_led():
 def update_all():
     data = request.json
     color = data.get('color', '#000000').lstrip('#')
-    rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    
+    # Convert hex color to RGB first, then rearrange to GBR
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    gbr = (g, b, r)  # Rearrange to GBR order
     
     try:
-        pixels.fill(rgb)
+        pixels.fill(gbr)
         pixels.show()
         return jsonify({"success": True})
     except Exception as e:
