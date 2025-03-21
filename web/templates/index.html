@@ -4,7 +4,6 @@
     <title>3D Christmas Tree Lights</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { margin: 0; }
         #container { 
@@ -243,6 +242,26 @@
               });
         }
 
+        // Add polling function to sync 3D view with LED states
+        function pollLEDStates() {
+            fetch('/get_led_states')
+                .then(response => response.json())
+                .then(states => {
+                    Object.entries(states).forEach(([id, color]) => {
+                        const light = lights[id];
+                        if (light) {
+                            const rgbColor = new THREE.Color(color);
+                            light.material.color.set(rgbColor);
+                            light.material.emissive.set(rgbColor);
+                            light.material.needsUpdate = true;
+                        }
+                    });
+                });
+        }
+
+        // Poll every second when animations are running
+        let pollInterval = null;
+
         function startRain() {
             document.getElementById('rainStart').disabled = true;
             document.getElementById('rainStop').disabled = false;
@@ -254,7 +273,10 @@
                 }
             }).then(response => response.json())
               .then(data => {
-                  if (!data.success) {
+                  if (data.success) {
+                      // Start polling when animation starts
+                      pollInterval = setInterval(pollLEDStates, 1000);
+                  } else {
                       console.error('Failed to start animation:', data.message);
                       document.getElementById('rainStart').disabled = false;
                       document.getElementById('rainStop').disabled = true;
@@ -274,6 +296,11 @@
             }).then(response => response.json())
               .then(data => {
                   if (data.success) {
+                      // Stop polling when animation stops
+                      if (pollInterval) {
+                          clearInterval(pollInterval);
+                          pollInterval = null;
+                      }
                       // Reset all LED visualizations
                       Object.values(lights).forEach(light => {
                           light.material.color.set(new THREE.Color(0x000000));
@@ -287,23 +314,6 @@
                   }
               });
         }
-
-        // Setup Socket.IO connection
-        const socket = io();
-        
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
-
-        socket.on('led_update', (data) => {
-            const light = lights[data.id];
-            if (light) {
-                const color = new THREE.Color(data.color);
-                light.material.color.set(color);
-                light.material.emissive.set(color);
-                light.material.needsUpdate = true;
-            }
-        });
 
         // Initialize everything
         init();
