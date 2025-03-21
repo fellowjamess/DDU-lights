@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify, request
+from flask_socketio import SocketIO, emit
 import numpy as np
 import board
 import neopixel
@@ -9,6 +10,7 @@ import time
 import random
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 
 # NeoPixel setup
 pixel_pin = board.D18
@@ -63,6 +65,13 @@ animation_running = False
 def home():
     return render_template('index.html', led_positions=json.dumps(led_positions))
 
+def update_3d_view(led_id, color):
+    """Helper function to emit WebSocket updates"""
+    socketio.emit('led_update', {
+        'id': led_id,
+        'color': color
+    })
+
 @app.route('/update_led', methods=['POST'])
 def update_led():
     data = request.json
@@ -78,6 +87,8 @@ def update_led():
     try:
         pixels[led_id] = gbr
         pixels.show()
+        # Emit update for 3D view (in RGB format)
+        update_3d_view(led_id, f'#{color}')
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
@@ -96,6 +107,9 @@ def update_all():
     try:
         pixels.fill(gbr)
         pixels.show()
+        # Emit update for all LEDs in 3D view
+        for led in led_positions:
+            update_3d_view(led['id'], f'#{color}')
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
@@ -111,10 +125,12 @@ def rain_animation():
         for led in sorted_leds:
             # Add new drop
             led_id = led['id']
-            # Blue color in GBR format
+            # Blue color in GBR format for NeoPixels
             pixels[led_id] = (0, 255, 0)
             active_leds.append(led_id)
             pixels.show()
+            # Emit update for 3D view (in RGB format)
+            update_3d_view(led_id, '#0000ff')
             
             # Wait a bit
             time.sleep(0.05)
@@ -124,11 +140,14 @@ def rain_animation():
                 old_led = active_leds.pop(0)
                 pixels[old_led] = (0, 0, 0)
                 pixels.show()
+                # Emit update to turn off LED in 3D view
+                update_3d_view(old_led, '#000000')
         
         # Turn off remaining LEDs
         for led_id in active_leds:
             pixels[led_id] = (0, 0, 0)
             pixels.show()
+            update_3d_view(led_id, '#000000')
             time.sleep(0.05)
         
         # Small pause between drops
@@ -160,4 +179,4 @@ def stop_rain():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

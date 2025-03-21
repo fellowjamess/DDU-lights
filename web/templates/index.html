@@ -4,6 +4,7 @@
     <title>3D Christmas Tree Lights</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { margin: 0; }
         #container { 
@@ -287,20 +288,22 @@
               });
         }
 
-        // Add WebSocket connection for real-time updates
-        const socket = new WebSocket(`ws://${window.location.hostname}:5000/ws`);
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.type === 'led_update') {
-                const light = lights[data.id];
-                if (light) {
-                    const color = new THREE.Color(data.color);
-                    light.material.color.set(color);
-                    light.material.emissive.set(color);
-                    light.material.needsUpdate = true;
-                }
+        // Setup Socket.IO connection
+        const socket = io();
+        
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('led_update', (data) => {
+            const light = lights[data.id];
+            if (light) {
+                const color = new THREE.Color(data.color);
+                light.material.color.set(color);
+                light.material.emissive.set(color);
+                light.material.needsUpdate = true;
             }
-        };
+        });
 
         // Initialize everything
         init();
