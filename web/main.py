@@ -29,12 +29,11 @@ try:
         try:
             parts = line.strip().split(',')
             if len(parts) == 3:
-                x, y, z = map(float, parts)
                 led_positions.append({
                     "id": idx,
-                    "x": x,
-                    "y": y,
-                    "z": z
+                    "x": parts[0],
+                    "y": parts[1],
+                    "z": parts[2]
                 })
         except ValueError:
             print(f"Skipping invalid coordinate at line {idx + 1}")
@@ -52,11 +51,11 @@ def update_led():
     led_id = data.get('id')
     color = data.get('color', '#000000').lstrip('#')
     
-    # Convert hex color to RGB
-    rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-    
+    # Convert hex color to GBR
+    gbr = tuple(int(color[i:i+2], 16) for i in (2, 0, 4))
+
     try:
-        pixels[led_id] = rgb
+        pixels[led_id] = gbr
         pixels.show()
         return jsonify({"success": True})
     except Exception as e:
@@ -66,10 +65,10 @@ def update_led():
 def update_all():
     data = request.json
     color = data.get('color', '#000000').lstrip('#')
-    rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    gbr = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
     
     try:
-        pixels.fill(rgb)
+        pixels.fill(gbr)
         pixels.show()
         return jsonify({"success": True})
     except Exception as e:
