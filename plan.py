@@ -41,14 +41,17 @@ def detect_led_position(frame, i, angle_name):
     # Combine red masks
     mask = cv2.bitwise_or(mask_red1, mask_red2)
     
-    # Create folders if they don't exist
+    # Create data folder and subfolders
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    
     folder_prefix = 'alpha' if angle_name == 'alpha' else 'beta'
-    for folder in [f'{folder_prefix}_mask', f'{folder_prefix}_contours']:
+    for folder in [f'data/{folder_prefix}_mask', f'data/{folder_prefix}_contours']:
         if not os.path.exists(folder):
             os.makedirs(folder)
     
     # Save mask for each LED
-    cv2.imwrite(f"{folder_prefix}_mask/led_{i}_mask.jpg", mask)
+    cv2.imwrite(f"data/{folder_prefix}_mask/led_{i}_mask.jpg", mask)
 
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -66,8 +69,8 @@ def detect_led_position(frame, i, angle_name):
             cv2.drawContours(contour_image, [largest], -1, (0, 255, 0), 2)
             cv2.circle(contour_image, (cx, cy), 5, (0, 0, 255), -1)
             
-            # Save the contour image
-            cv2.imwrite(f"{folder_prefix}_contours/led_{i}_contour.jpg", contour_image)
+            # Save the contour image in data folder
+            cv2.imwrite(f"data/{folder_prefix}_contours/led_{i}_contour.jpg", contour_image)
             
             return (cx, cy)
     return None
@@ -108,16 +111,20 @@ def capture_plan(camera, angle_name):
             # Draw detection on frame
             cv2.circle(frameBGR, position, 5, (0, 0, 255), -1)
     
-    # Save annotated frame
+    # Save annotated frame in data folder
     if frameBGR is not None:
-        cv2.imwrite(f"plan_{angle_name}.jpg", frameBGR)
+        cv2.imwrite(f"data/plan_{angle_name}.jpg", frameBGR)
     
-    # Save coordinates
-    np.save(f"plan_{angle_name}.npy", np.array(led_positions))
+    # Save coordinates in data folder
+    np.save(f"data/plan_{angle_name}.npy", np.array(led_positions))
     
     return led_positions
 
 def main():
+    # Create data folder if it doesn't exist
+    if not os.path.exists('data'):
+        os.makedirs('data')
+        
     camera = setup_camera()
     
     try:

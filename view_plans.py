@@ -4,10 +4,10 @@ import cv2
 from mpl_toolkits.mplot3d import Axes3D
 
 def main():
-    # Load the coordinate data
+    # Load the coordinate data from data folder
     try:
-        alpha_positions = np.load('plan_alpha.npy')
-        beta_positions = np.load('plan_beta.npy')
+        alpha_positions = np.load('data/plan_alpha.npy')
+        beta_positions = np.load('data/plan_beta.npy')
     except FileNotFoundError:
         print("Error: Could not find plan data files. Run plan.py first.")
         return
@@ -23,7 +23,7 @@ def main():
 
     # Plot alpha plan (0 degrees)
     try:
-        img_alpha = cv2.imread('plan_alpha.jpg')
+        img_alpha = cv2.imread('data/plan_alpha.jpg')
         if img_alpha is not None:
             img_alpha = cv2.cvtColor(img_alpha, cv2.COLOR_BGR2RGB)
             ax1.imshow(img_alpha)
@@ -129,8 +129,8 @@ def main():
     ax3.scatter(0, 0, 0, c='k', s=100, marker='*', label='Origin (0,0,0)')
     ax3.legend()
 
-    # Save 3D coordinates to text file
-    with open('led_3d_coordinates.txt', 'w') as f:
+    # Save 3D coordinates to text file in data folder
+    with open('data/led_3d_coordinates.txt', 'w') as f:
         f.write("LED ID, X, Y, Z\n")
         for led_id, coords in sorted(matched_leds.items()):
             f.write(f"LED {led_id}: ({coords[0]:.2f}, {coords[1]:.2f}, {coords[2]:.2f})\n")
