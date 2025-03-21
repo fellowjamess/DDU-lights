@@ -69,24 +69,15 @@ def main():
                 # Store 3D coordinates (using z_alpha as it should match z_beta)
                 matched_leds[led_id_alpha] = (x_beta, y_alpha, z_alpha)
                 
-                # Draw perpendicular lines
-                # Line from alpha plane
-                ax3.plot([0, x_beta], [y_alpha, y_alpha], [z_alpha, z_alpha], 
-                        'g--', alpha=0.5)
-                # Line from beta plane
-                ax3.plot([x_beta, x_beta], [0, y_alpha], [z_beta, z_beta], 
-                        'g--', alpha=0.5)
-                
                 # Plot intersection point
                 ax3.scatter(x_beta, y_alpha, z_alpha, c='g', s=100)
                 ax3.text(x_beta, y_alpha, z_alpha, f'LED{led_id_alpha}')
 
-    # For beta plane (XZ plane at y=0) - Perpendicular to alpha plane
+    # For beta plane (XZ plane at y=0)
     for pos in beta_positions:
         led_id = int(pos[0])
-        # Shift coordinates to start from origin (0,0,0) and ensure they're positive
-        x = abs(pos[1] - beta_positions[0, 1])   # Make x position positive
-        z = abs(pos[2] - beta_positions[0, 2])   # Make z position positive
+        x = abs(pos[1] - beta_positions[0, 1])
+        z = abs(pos[2] - beta_positions[0, 2])
         ax3.scatter(x, 0, z, c='b', s=50)
         ax3.text(x, 0, z, f'LED{led_id}')
 
