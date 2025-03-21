@@ -21,9 +21,49 @@
             overflow-y: auto;
         }
         .led-control {
-            margin: 10px 0;
+            margin: 5px;
             padding: 10px;
             border: 1px solid #ddd;
+            border-radius: 5px;
+            display: inline-block;
+            width: 200px;
+            vertical-align: top;
+        }
+
+        .controls-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .led-control h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .all-leds-control {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e0e0e0;
             border-radius: 5px;
         }
     </style>
@@ -33,12 +73,14 @@
         <div id="three-container"></div>
         <div id="controls">
             <h2>LED Controls</h2>
-            <div class="led-control">
+            <div class="all-leds-control">
                 <h3>All LEDs</h3>
-                <input type="color" id="all-color" value="#000000">
-                <button onclick="updateAll()">Update All</button>
+                <div class="control-row">
+                    <input type="color" id="all-color" value="#000000">
+                    <button onclick="updateAll()">Update All</button>
+                </div>
             </div>
-            <div id="individual-controls"></div>
+            <div class="controls-grid" id="individual-controls"></div>
         </div>
     </div>
 
@@ -96,13 +138,15 @@
                 scene.add(light);
                 lights[pos.id] = light;
 
-                // Create individual LED controls
+                // Create individual LED controls with updated structure
                 const control = document.createElement('div');
                 control.className = 'led-control';
                 control.innerHTML = `
                     <h3>LED ${pos.id}</h3>
-                    <input type="color" id="color-${pos.id}" value="#000000">
-                    <button onclick="updateLED(${pos.id})">Update</button>
+                    <div class="control-row">
+                        <input type="color" id="color-${pos.id}" value="#000000">
+                        <button onclick="updateLED(${pos.id})">Update</button>
+                    </div>
                 `;
                 document.getElementById('individual-controls').appendChild(control);
             });
