@@ -106,7 +106,7 @@ def capture_plan(camera, angle_name):
         if position:
             led_positions.append((i, position[0], position[1]))
             # Draw detection on frame
-            cv2.circle(frameBGR, position, 5, (0, 255, 0), -1)
+            cv2.circle(frameBGR, position, 5, (0, 0, 255), -1)
     
     # Save annotated frame
     if frameBGR is not None:
