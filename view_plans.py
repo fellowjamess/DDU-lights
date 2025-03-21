@@ -56,84 +56,80 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos_alpha in alpha_positions:
         led_id_alpha = int(pos_alpha[0])
-        # Convert from image coordinates to Three.js coordinates
-        y = (pos_alpha[1] - alpha_positions[0, 1]) / 1920  # Normalize by image width
-        z = (pos_alpha[2] - alpha_positions[0, 2]) / 1080  # Normalize by image height
+        # Center coordinates around origin (0,0,0)
+        y = (pos_alpha[1] - alpha_positions[0, 1] - 960) / 1920  # Center Y coordinate
+        z = -(pos_alpha[2] - alpha_positions[0, 2] - 540) / 1080  # Center and invert Z coordinate
+        
+        # Plot point on YZ plane (alpha)
+        ax3.scatter(0, y, z, c='r', s=50)
+        ax3.text(0, y, z, f'LED{led_id_alpha}')
         
         # Look for matching LED in beta positions
         for pos_beta in beta_positions:
             led_id_beta = int(pos_beta[0])
             if led_id_alpha == led_id_beta:
-                # Convert beta coordinates
-                x = (pos_beta[1] - beta_positions[0, 1]) / 1920  # Normalize x coordinate
-                z_beta = (pos_beta[2] - beta_positions[0, 2]) / 1080  # Use for averaging z
+                # Convert beta coordinates (now on XZ plane)
+                x = (pos_beta[1] - beta_positions[0, 1] - 960) / 1920  # Center X coordinate
+                z_beta = -(pos_beta[2] - beta_positions[0, 2] - 540) / 1080  # Center and invert Z coordinate
                 
-                # Average the z coordinates from both views
-                z_final = (z + z_beta) / 2
+                # Plot point on XZ plane (beta)
+                ax3.scatter(x, 0, z_beta, c='b', s=50)
+                ax3.text(x, 0, z_beta, f'LED{led_id_beta}')
                 
-                # Store normalized coordinates between 0 and 1
+                # Store matched coordinates
                 matched_leds[led_id_alpha] = {
                     "id": led_id_alpha,
                     "x": float(x),
                     "y": float(y),
-                    "z": float(z_final)
+                    "z": float((z + z_beta) / 2)  # Average Z coordinates
                 }
-                
-                # Plot intersection point
-                ax3.scatter(x, y, z_final, c='g', s=100)
-                ax3.text(x, y, z_final, f'LED{led_id_alpha}')
 
-    # For beta plane (XZ plane at y=0)
-    for pos in beta_positions:
-        led_id = int(pos[0])
-        x = abs(pos[1] - beta_positions[0, 1])
-        z = abs(pos[2] - beta_positions[0, 2])
-        ax3.scatter(x, 0, z, c='b', s=50)
-        ax3.text(x, 0, z, f'LED{led_id}')
-
-    # Customize 3D plot
-    ax3.set_xlabel('X')
-    ax3.set_ylabel('Y')
-    ax3.set_zlabel('Z')
-    ax3.set_title('3D View')
-
-    # Calculate positive max range
+    # Calculate symmetric range for axes
     max_range = max(
-        np.max([abs(pos[1] - alpha_positions[0, 1]) for pos in alpha_positions]),
-        np.max([abs(pos[1] - beta_positions[0, 1]) for pos in beta_positions]),
-        np.max([abs(pos[2] - alpha_positions[0, 2]) for pos in alpha_positions]),
-        np.max([abs(pos[2] - beta_positions[0, 2]) for pos in beta_positions])
+        abs(max(matched_leds[led]["x"] for led in matched_leds)),
+        abs(min(matched_leds[led]["x"] for led in matched_leds)),
+        abs(max(matched_leds[led]["y"] for led in matched_leds)),
+        abs(min(matched_leds[led]["y"] for led in matched_leds)),
+        abs(max(matched_leds[led]["z"] for led in matched_leds)),
+        abs(min(matched_leds[led]["z"] for led in matched_leds))
     )
+    max_range = max(max_range, 0.5)  # Ensure minimum range
     
-    # Create grid for planes (only positive values)
-    xx, zz = np.meshgrid([0, max_range], [0, max_range])
+    # Create grid for planes
+    xx, zz = np.meshgrid([-max_range, max_range], [-max_range, max_range])
     
     # Alpha plane (YZ at x=0) - RED plane
     ax3.plot_surface(
-        np.zeros_like(xx),  # x = 0 plane
-        xx,                 # y values (positive only)
-        zz,                # z values (positive only)
+        np.zeros_like(xx),
+        xx,
+        zz,
         alpha=0.2, color='red'
     )
 
     # Beta plane (XZ at y=0) - BLUE plane
     ax3.plot_surface(
-        xx,                # x values (positive only)
-        np.zeros_like(xx), # y = 0 plane
-        zz,                # z values (positive only)
+        xx,
+        np.zeros_like(xx),
+        zz,
         alpha=0.2, color='blue'
     )
 
-    # Set equal aspect ratio for 3D plot
+    # Set equal aspect ratio and symmetric limits
     ax3.set_box_aspect([1, 1, 1])
+    ax3.set_xlim([-max_range, max_range])
+    ax3.set_ylim([-max_range, max_range])
+    ax3.set_zlim([-max_range, max_range])
 
-    # Set the viewing angle to better show perpendicular planes
-    ax3.view_init(elev=20, azim=45)
+    # Update axis labels
+    ax3.set_xlabel('X')
+    ax3.set_ylabel('Y')
+    ax3.set_zlabel('Z')
+    ax3.set_title('3D View')
 
-    # Adjust plot limits to show only positive values
-    ax3.set_xlim([0, max_range])
-    ax3.set_ylim([0, max_range])
-    ax3.set_zlim([0, max_range])
+    # Add coordinate system visualization
+    ax3.plot([-max_range, max_range], [0, 0], [0, 0], 'k--', alpha=0.3)  # X axis
+    ax3.plot([0, 0], [-max_range, max_range], [0, 0], 'k--', alpha=0.3)  # Y axis
+    ax3.plot([0, 0], [0, 0], [-max_range, max_range], 'k--', alpha=0.3)  # Z axis
 
     # Add origin point
     ax3.scatter(0, 0, 0, c='k', s=100, marker='*', label='Origin (0,0,0)')
