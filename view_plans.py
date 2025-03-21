@@ -56,33 +56,40 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos_alpha in alpha_positions:
         led_id_alpha = int(pos_alpha[0])
-        # Center coordinates around origin (0,0,0)
-        y = (pos_alpha[1] - alpha_positions[0, 1] - 960) / 1920  # Center Y coordinate
-        z = -(pos_alpha[2] - alpha_positions[0, 2] - 540) / 1080  # Center and invert Z coordinate
+        # Get coordinates from alpha plan
+        y_alpha = (pos_alpha[1] - alpha_positions[0, 1]) / 1920  # Normalize Y coordinate
+        x_alpha = 0  # This is the alpha plane at x=0
         
         # Plot point on YZ plane (alpha)
-        ax3.scatter(0, y, z, c='r', s=50)
-        ax3.text(0, y, z, f'LED{led_id_alpha}')
+        ax3.scatter(x_alpha, y_alpha, 0, c='r', s=50)
+        ax3.text(x_alpha, y_alpha, 0, f'LED{led_id_alpha}')
         
         # Look for matching LED in beta positions
         for pos_beta in beta_positions:
             led_id_beta = int(pos_beta[0])
             if led_id_alpha == led_id_beta:
-                # Convert beta coordinates (now on XZ plane)
-                x = (pos_beta[1] - beta_positions[0, 1] - 960) / 1920  # Center X coordinate
-                z_beta = -(pos_beta[2] - beta_positions[0, 2] - 540) / 1080  # Center and invert Z coordinate
+                # Get coordinates from beta plan
+                x_beta = (pos_beta[1] - beta_positions[0, 1]) / 1920  # Normalize X coordinate
+                y_beta = (pos_beta[2] - beta_positions[0, 2]) / 1080  # Use Y from beta
                 
                 # Plot point on XZ plane (beta)
-                ax3.scatter(x, 0, z_beta, c='b', s=50)
-                ax3.text(x, 0, z_beta, f'LED{led_id_beta}')
+                ax3.scatter(x_beta, 0, 0, c='b', s=50)
+                ax3.text(x_beta, 0, 0, f'LED{led_id_beta}')
+                
+                # Calculate Z coordinate using triangulation from both planes
+                z = abs(y_alpha - y_beta)  # Z is the difference between Y coordinates
                 
                 # Store matched coordinates
                 matched_leds[led_id_alpha] = {
                     "id": led_id_alpha,
-                    "x": float(x),
-                    "y": float(y),
-                    "z": float((z + z_beta) / 2)  # Average Z coordinates
+                    "x": float(x_beta),    # X from beta plane
+                    "y": float(y_alpha),   # Y from alpha plane
+                    "z": float(z)          # Z calculated from difference
                 }
+                
+                # Plot intersection point
+                ax3.scatter(x_beta, y_alpha, z, c='g', s=100)
+                ax3.text(x_beta, y_alpha, z, f'LED{led_id_alpha}')
 
     # Calculate symmetric range for axes
     max_range = max(

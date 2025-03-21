@@ -54,6 +54,7 @@ def detect_led_position(frame, i, angle_name):
         largest = max(contours, key=cv2.contourArea)
         M = cv2.moments(largest)
         if M["m00"] != 0:
+            # Only calculate X and Y coordinates
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
             
@@ -65,6 +66,7 @@ def detect_led_position(frame, i, angle_name):
             # Save the contour image in data folder
             cv2.imwrite(f"data/{folder_prefix}_contours/led_{i}_contour.jpg", contour_image)
             
+            # Only return X and Y
             return (cx, cy)
     return None
 
@@ -100,8 +102,8 @@ def capture_plan(camera, angle_name):
         pixels.show()
         
         if position:
+            # Store only LED ID and X,Y coordinates
             led_positions.append((i, position[0], position[1]))
-            # Draw detection on frame
             cv2.circle(frameBGR, position, 5, (0, 0, 255), -1)
     
     # Save annotated frame in data folder
