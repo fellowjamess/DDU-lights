@@ -8,7 +8,7 @@ import os
 
 # NeoPixel setup
 pixel_pin = board.D18
-num_pixels = 40  # Adjust based on your LED strip
+num_pixels = 20  # Adjust based on your LED strip
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False
 )
@@ -45,8 +45,8 @@ def detect_led(frame):
             if M["m00"] != 0:
                 cx = int(M["m10"] / M["m00"])
                 cy = int(M["m01"] / M["m00"])
-                return (cx, cy)
-    return None
+                return (cx, cy), largest  # Return both position and contour
+    return None, None
 
 def calculate_3d_position(pixel_index, image_point, camera_params):
     # Known parameters
@@ -65,11 +65,18 @@ def calculate_3d_position(pixel_index, image_point, camera_params):
     return None
 
 def main():
-    # Create output directory
-    output_dir = "xmas_light_position"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Create output directories
+    base_dir = "xmas light pictures"
+    output_dir = os.path.join(base_dir, "positions")
+    image_dir = os.path.join(base_dir, "raw_frames")
+    mask_dir = os.path.join(base_dir, "masks")
+    debug_dir = os.path.join(base_dir, "debug")
     
+    # Create all required directories
+    for directory in [base_dir, output_dir, image_dir, mask_dir, debug_dir]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
     camera = setup_camera()
     
     # Camera parameters (adjust these based on calibration)
@@ -105,11 +112,29 @@ def main():
             
             # Capture multiple frames and average position
             positions = []
-            for _ in range(3):
+            contours = []  # Store contours for debug visualization
+            for frame_num in range(3):
                 frame = camera.capture_array()
-                position = detect_led(frame)
-                if position:
+                # Save original frame
+                cv2.imwrite(os.path.join(image_dir, f"led_{i}_frame_{frame_num}.jpg"), frame)
+                
+                # Create and save mask
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                lower = np.array([35, 50, 200])
+                upper = np.array([85, 255, 255])
+                mask = cv2.inRange(hsv, lower, upper)
+                cv2.imwrite(os.path.join(mask_dir, f"led_{i}_mask_{frame_num}.jpg"), mask)
+                
+                position, contour = detect_led(frame)  # Get both position and contour
+                if position and contour:
                     positions.append(position)
+                    
+                    # Create debug visualization
+                    debug_frame = frame.copy()
+                    cv2.circle(debug_frame, position, 5, (0, 0, 255), -1)
+                    cv2.drawContours(debug_frame, [contour], -1, (0, 255, 0), 2)
+                    cv2.imwrite(os.path.join(debug_dir, f"led_{i}_debug_{frame_num}.jpg"), debug_frame)
+                
                 time.sleep(0.1)
             
             # Calculate average position if we got any valid detections
@@ -123,10 +148,6 @@ def main():
                 if position_3d:
                     led_indices.append(i)
                     led_positions.append(position_3d)
-                    
-                    # Save debug image
-                    cv2.circle(frame, image_point, 5, (0, 0, 255), -1)
-                    cv2.imwrite(f"{output_dir}/led_{i}_debug.jpg", frame)
                     print(f"LED {i}: Position {position_3d}")
             
             # Turn off LED
@@ -145,17 +166,17 @@ def main():
         # Save results if we got any
         if led_positions:
             # Save positions to NPZ file
-            np.savez(f"{output_dir}/led_positions.npz",
+            np.savez(os.path.join(output_dir, "led_positions.npz"),
                     indices=np.array(led_indices),
                     positions=np.array(led_positions))
             
             # Save human-readable positions to text file
-            with open(f"{output_dir}/led_positions.txt", 'w') as f:
+            with open(os.path.join(output_dir, "led_positions.txt"), 'w') as f:
                 f.write("LED ID, X, Y, Z\n")
                 for idx, pos in zip(led_indices, led_positions):
                     f.write(f"LED {idx}: ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})\n")
             
-            print(f"\nSaved {len(led_positions)} LED positions to {output_dir}/")
+            print(f"\nSaved {len(led_positions)} LED positions to {base_dir}/")
         else:
             print("\nNo LED positions were detected")
 
