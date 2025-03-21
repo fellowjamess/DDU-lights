@@ -26,13 +26,18 @@ try:
     
     led_positions = []
     for idx, line in enumerate(lines):
-        x, y, z = map(float, line.strip().split(','))
-        led_positions.append({
-            "id": idx,
-            "x": x,
-            "y": y,
-            "z": z
-        })
+        try:
+            parts = line.strip().split(',')
+            if len(parts) == 3:
+                x, y, z = map(float, parts)
+                led_positions.append({
+                    "id": idx,
+                    "x": x,
+                    "y": y,
+                    "z": z
+                })
+        except ValueError:
+            print(f"Skipping invalid coordinate at line {idx + 1}")
 except Exception as e:
     print(f"Error loading LED coordinates: {e}")
     led_positions = []  # Fallback if no position data exists
