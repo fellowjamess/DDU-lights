@@ -8,7 +8,7 @@ import os
 
 # NeoPixel setup
 pixel_pin = board.D18
-num_pixels = 20  # Adjust based on your LED strip
+num_pixels = 40  # Adjust based on your LED strip
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False
 )
