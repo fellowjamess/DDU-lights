@@ -3,6 +3,7 @@
 <head>
     <title>3D Christmas Tree Lights</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
     <style>
         body { margin: 0; }
         #container { 
@@ -44,24 +45,53 @@
     <script>
         const ledPositions = {{ led_positions|safe }};
         let scene, camera, renderer, lights = [];
+        let controls;
 
         function init() {
             // Setup Three.js scene
             scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+
+            // Setup camera with better initial position
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / 2 / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer();
+            camera.position.set(5, 5, 5);
+            camera.lookAt(0, 0, 0);
+
+            // Setup renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth / 2, window.innerHeight);
             document.getElementById('three-container').appendChild(renderer.domElement);
 
-            // Add ambient light
+            // Add OrbitControls for better interaction
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Add ambient and directional light
             const ambientLight = new THREE.AmbientLight(0x404040);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(5, 5, 5);
             scene.add(ambientLight);
+            scene.add(directionalLight);
+
+            // Add coordinate axes helper
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+
+            // Add grid helper
+            const gridHelper = new THREE.GridHelper(10, 10);
+            scene.add(gridHelper);
 
             // Create LED representations
             ledPositions.forEach(pos => {
-                const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-                const material = new THREE.MeshPhongMaterial({ color: 0x000000 });
+                const geometry = new THREE.SphereGeometry(0.1, 16, 16);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: 0x000000,
+                    emissive: 0x000000
+                });
                 const light = new THREE.Mesh(geometry, material);
+                
+                // Set position from data
                 light.position.set(pos.x, pos.y, pos.z);
                 scene.add(light);
                 lights[pos.id] = light;
@@ -77,17 +107,19 @@
                 document.getElementById('individual-controls').appendChild(control);
             });
 
-            camera.position.z = 5;
             animate();
         }
 
         function animate() {
             requestAnimationFrame(animate);
+            controls.update(); // Update controls in animation loop
             renderer.render(scene, camera);
         }
 
         function updateLED(id) {
             const color = document.getElementById(`color-${id}`).value;
+            const rgbColor = new THREE.Color(color);
+            
             fetch('/update_led', {
                 method: 'POST',
                 headers: {
@@ -100,13 +132,17 @@
             }).then(response => response.json())
               .then(data => {
                   if (data.success) {
-                      lights[id].material.color.setStyle(color);
+                      lights[id].material.color.set(rgbColor);
+                      lights[id].material.emissive.set(rgbColor);
+                      lights[id].material.needsUpdate = true;
                   }
               });
         }
 
         function updateAll() {
             const color = document.getElementById('all-color').value;
+            const rgbColor = new THREE.Color(color);
+            
             fetch('/update_all', {
                 method: 'POST',
                 headers: {
@@ -119,7 +155,9 @@
               .then(data => {
                   if (data.success) {
                       Object.values(lights).forEach(light => {
-                          light.material.color.setStyle(color);
+                          light.material.color.set(rgbColor);
+                          light.material.emissive.set(rgbColor);
+                          light.material.needsUpdate = true;
                       });
                   }
               });
