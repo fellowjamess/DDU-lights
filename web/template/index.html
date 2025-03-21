@@ -86,8 +86,22 @@
             renderer.render(scene, camera);
         }
 
+        function rgbToGbr(color) {
+            // Convert hex color to RGB components
+            const r = parseInt(color.substr(1,2), 16);
+            const g = parseInt(color.substr(3,2), 16);
+            const b = parseInt(color.substr(5,2), 16);
+            
+            // Convert to GBR hex string
+            return '#' + 
+                g.toString(16).padStart(2, '0') + 
+                b.toString(16).padStart(2, '0') + 
+                r.toString(16).padStart(2, '0');
+        }
+
         function updateLED(id) {
             const color = document.getElementById(`color-${id}`).value;
+            const gbrColor = rgbToGbr(color);
             fetch('/update_led', {
                 method: 'POST',
                 headers: {
@@ -95,31 +109,32 @@
                 },
                 body: JSON.stringify({
                     id: id,
-                    color: color
+                    color: gbrColor
                 })
             }).then(response => response.json())
               .then(data => {
                   if (data.success) {
-                      lights[id].material.color.setStyle(color);
+                      lights[id].material.color.setStyle(color); // Keep RGB for Three.js
                   }
               });
         }
 
         function updateAll() {
             const color = document.getElementById('all-color').value;
+            const gbrColor = rgbToGbr(color);
             fetch('/update_all', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    color: color
+                    color: gbrColor
                 })
             }).then(response => response.json())
               .then(data => {
                   if (data.success) {
                       Object.values(lights).forEach(light => {
-                          light.material.color.setStyle(color);
+                          light.material.color.setStyle(color); // Keep RGB for Three.js
                       });
                   }
               });

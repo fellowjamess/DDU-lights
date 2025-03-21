@@ -51,8 +51,11 @@ def update_led():
     led_id = data.get('id')
     color = data.get('color', '#000000').lstrip('#')
     
-    # Convert hex color to GBR
-    gbr = tuple(int(color[i:i+2], 16) for i in (2, 0, 4))
+    # Convert hex color to RGB first, then rearrange to GBR
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    gbr = (g, b, r)  # Rearrange to GBR order
 
     try:
         pixels[led_id] = gbr
@@ -65,7 +68,12 @@ def update_led():
 def update_all():
     data = request.json
     color = data.get('color', '#000000').lstrip('#')
-    gbr = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    
+    # Convert hex color to RGB first, then rearrange to GBR
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    gbr = (g, b, r)  # Rearrange to GBR order
     
     try:
         pixels.fill(gbr)
