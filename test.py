@@ -9,10 +9,13 @@ import os
 # Camera setup
 def setup_camera():
     picam2 = Picamera2()
-    # Use full resolution of Camera Module 2.1 for better accuracy
+    # Use higher resolution and enable HDR for better light detection
     preview_config = picam2.create_preview_configuration(
-        main={"size": (3280, 2464)},  # Maximum resolution
-        buffer_count=4
+        main={"size": (3280, 2464), "format": "RGB888"},
+        buffer_count=4,
+        controls={"FrameDurationLimits": (100000, 100000),  # Fixed exposure time
+                 "ExposureTime": 50000,  # 50ms exposure
+                 "AnalogueGain": 1.0}    # Minimum gain for less noise
     )
     picam2.configure(preview_config)
     picam2.start()
@@ -27,39 +30,69 @@ pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False, pixel_order=ORDER
 )
 
-def detect_bright_point(frame, min_area=50):
+def detect_bright_point(frame, min_area=100):
     # Convert to HSV for better LED detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # Define range for bright LED detection
-    lower_green = np.array([40, 100, 150])  # Increased minimum values
-    upper_green = np.array([80, 255, 255])  # Green LED range
+    # More precise range for green LED detection
+    lower_green = np.array([45, 150, 150])  # Tighter green range
+    upper_green = np.array([75, 255, 255])  # Upper limit unchanged
     
-    # Create mask for green color
-    mask = cv2.inRange(hsv, lower_green, upper_green)
+    # Create mask with multiple thresholds
+    mask1 = cv2.inRange(hsv, lower_green, upper_green)
     
-    # Apply noise reduction
+    # Additional brightness-based mask
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, bright_mask = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+    
+    # Combine masks
+    mask = cv2.bitwise_and(mask1, bright_mask)
+    
+    # Advanced noise reduction
     mask = cv2.GaussianBlur(mask, (5, 5), 0)
-    mask = cv2.erode(mask, None, iterations=1)
-    mask = cv2.dilate(mask, None, iterations=1)
+    kernel = np.ones((3,3), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     
-    # Find contours
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Find contours with sub-pixel accuracy
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     
     if contours:
-        # Filter contours by minimum area
-        valid_contours = [c for c in contours if cv2.contourArea(c) > min_area]
+        # Filter contours by area and circularity
+        valid_contours = []
+        for c in contours:
+            area = cv2.contourArea(c)
+            if area > min_area:
+                perimeter = cv2.arcLength(c, True)
+                circularity = 4 * np.pi * area / (perimeter * perimeter)
+                if circularity > 0.7:  # Circle has circularity of 1
+                    valid_contours.append(c)
+        
         if valid_contours:
             # Get the brightest contour
-            largest = max(valid_contours, key=lambda c: np.mean(frame[cv2.boundingRect(c)[1]:cv2.boundingRect(c)[1]+cv2.boundingRect(c)[3], 
-                                                                   cv2.boundingRect(c)[0]:cv2.boundingRect(c)[0]+cv2.boundingRect(c)[2]]))
+            brightest = max(valid_contours, 
+                          key=lambda c: np.mean(frame[cv2.boundingRect(c)[1]:cv2.boundingRect(c)[1]+cv2.boundingRect(c)[3], 
+                                                    cv2.boundingRect(c)[0]:cv2.boundingRect(c)[0]+cv2.boundingRect(c)[2]]))
             
-            # Calculate centroid using moments for sub-pixel accuracy
-            M = cv2.moments(largest)
+            # Use moments for sub-pixel accuracy
+            M = cv2.moments(brightest)
             if M["m00"] != 0:
-                cx = int(M["m10"] / M["m00"])
-                cy = int(M["m01"] / M["m00"])
-                return (cx, cy), largest
+                cx = M["m10"] / M["m00"]
+                cy = M["m01"] / M["m00"]
+                
+                # Refine position using intensity-weighted average
+                roi = frame[max(0, int(cy)-5):int(cy)+6, max(0, int(cx)-5):int(cx)+6]
+                if roi.size > 0:
+                    y_indices, x_indices = np.indices(roi.shape[:2])
+                    intensity = np.mean(roi, axis=2)
+                    total_intensity = np.sum(intensity)
+                    if total_intensity > 0:
+                        refined_x = np.sum(x_indices * intensity) / total_intensity + max(0, int(cx)-5)
+                        refined_y = np.sum(y_indices * intensity) / total_intensity + max(0, int(cy)-5)
+                        return (refined_x, refined_y), brightest
+                
+                return (cx, cy), brightest
+    
     return None, None
 
 def calculate_3d_position(pixel_index, image_point, camera_params):
