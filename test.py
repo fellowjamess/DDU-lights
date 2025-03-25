@@ -9,12 +9,14 @@ import os
 # Camera setup
 def setup_camera():
     picam2 = Picamera2()
+    # Use full resolution of Camera Module 2.1 for better accuracy
     preview_config = picam2.create_preview_configuration(
-        main={"size": (1920, 1080)},  # Higher resolution for better accuracy
+        main={"size": (3280, 2464)},  # Maximum resolution
         buffer_count=4
     )
     picam2.configure(preview_config)
     picam2.start()
+    time.sleep(2)  # Wait for camera to stabilize
     return picam2
 
 # NeoPixel setup
@@ -25,53 +27,81 @@ pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False, pixel_order=ORDER
 )
 
-def detect_bright_point(frame):
-    # Convert to grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+def detect_bright_point(frame, min_area=50):
+    # Convert to HSV for better LED detection
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # Threshold to find bright spot
-    _, thresh = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)
+    # Define range for bright LED detection
+    lower_green = np.array([40, 100, 150])  # Increased minimum values
+    upper_green = np.array([80, 255, 255])  # Green LED range
+    
+    # Create mask for green color
+    mask = cv2.inRange(hsv, lower_green, upper_green)
+    
+    # Apply noise reduction
+    mask = cv2.GaussianBlur(mask, (5, 5), 0)
+    mask = cv2.erode(mask, None, iterations=1)
+    mask = cv2.dilate(mask, None, iterations=1)
     
     # Find contours
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if contours:
-        # Get largest contour
-        largest = max(contours, key=cv2.contourArea)
-        M = cv2.moments(largest)
-        if M["m00"] != 0:
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
-            return (cx, cy)
-    return None
+        # Filter contours by minimum area
+        valid_contours = [c for c in contours if cv2.contourArea(c) > min_area]
+        if valid_contours:
+            # Get the brightest contour
+            largest = max(valid_contours, key=lambda c: np.mean(frame[cv2.boundingRect(c)[1]:cv2.boundingRect(c)[1]+cv2.boundingRect(c)[3], 
+                                                                   cv2.boundingRect(c)[0]:cv2.boundingRect(c)[0]+cv2.boundingRect(c)[2]]))
+            
+            # Calculate centroid using moments for sub-pixel accuracy
+            M = cv2.moments(largest)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                return (cx, cy), largest
+    return None, None
 
 def calculate_3d_position(pixel_index, image_point, camera_params):
-    # Known parameters
-    strip_length = 1.0  # Length of LED strip in meters
-    pixel_spacing = strip_length / num_pixels
+    if not image_point:
+        return None
+        
+    x, y = image_point
     
-    # Calculate LED physical position (simplified)
-    led_x = pixel_index * pixel_spacing
+    # Camera calibration matrix (update these values based on actual calibration)
+    fx = camera_params['focal_length']  # Focal length in x
+    fy = camera_params['focal_length']  # Focal length in y
+    cx = camera_params['cx']  # Principal point x
+    cy = camera_params['cy']  # Principal point y
     
-    # Use camera parameters to calculate 3D position
-    if image_point:
-        x, y = image_point
-        # Simple triangulation (needs calibration for accuracy)
-        depth = camera_params['focal_length'] * camera_params['baseline'] / (x - camera_params['cx'])
-        world_y = (y - camera_params['cy']) * depth / camera_params['focal_length']
-        return (led_x, world_y, depth)
+    # Convert to normalized coordinates
+    x_normalized = (x - cx) / fx
+    y_normalized = (y - cy) / fy
+    
+    # Calculate depth using improved triangulation
+    if abs(x_normalized) > 0.001:  # Avoid division by zero
+        depth = camera_params['baseline'] / x_normalized
+        
+        # Apply depth limits for outlier rejection
+        if 0.1 < depth < 2.0:  # Reasonable depth range in meters
+            # Calculate world coordinates
+            world_x = depth * x_normalized
+            world_y = depth * y_normalized
+            world_z = depth
+            
+            return (world_x, world_y, world_z)
     return None
 
 def main():
     # Initialize camera
     camera = setup_camera()
     
-    # Camera parameters (needs calibration)
+    # Updated camera parameters for better accuracy
     camera_params = {
-        'focal_length': 9000,  # pixels
-        'baseline': 0.1,       # meters
-        'cx': 640,            # principal point x
-        'cy': 360             # principal point y
+        'focal_length': 3280,  # Based on full resolution
+        'baseline': 0.1,       # Update this based on actual measurement
+        'cx': 3280 // 2,      # Center of image x
+        'cy': 2464 // 2       # Center of image y
     }
     
     # Clear all pixels
