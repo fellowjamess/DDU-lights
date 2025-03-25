@@ -19,7 +19,7 @@ def setup_camera():
 
 # NeoPixel setup
 pixel_pin = board.D18
-num_pixels = 40
+num_pixels = 20
 ORDER = neopixel.RGB
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False, pixel_order=ORDER
