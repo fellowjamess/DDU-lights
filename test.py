@@ -101,23 +101,21 @@ def calculate_3d_position(pixel_index, image_point, camera_params):
         
     x, y = image_point
     
-    # Camera calibration matrix (update these values based on actual calibration)
-    fx = camera_params['focal_length']  # Focal length in x
-    fy = camera_params['focal_length']  # Focal length in y
-    cx = camera_params['cx']  # Principal point x
-    cy = camera_params['cy']  # Principal point y
+    # Make camera the origin by centering coordinates
+    x_centered = x - camera_params['cx']
+    y_centered = y - camera_params['cy']
     
-    # Convert to normalized coordinates
-    x_normalized = (x - cx) / fx
-    y_normalized = (y - cy) / fy
+    # Convert to normalized coordinates relative to camera
+    x_normalized = x_centered / camera_params['focal_length']
+    y_normalized = y_centered / camera_params['focal_length']
     
-    # Calculate depth using improved triangulation
+    # Calculate depth relative to camera
     if abs(x_normalized) > 0.001:  # Avoid division by zero
         depth = camera_params['baseline'] / x_normalized
         
-        # Apply depth limits for outlier rejection
-        if 0.1 < depth < 2.0:  # Reasonable depth range in meters
-            # Calculate world coordinates
+        # Apply depth limits for outlier rejection (relative to camera)
+        if 0.1 < depth < 2.0:  # Reasonable depth range in meters from camera
+            # Calculate world coordinates with camera as origin
             world_x = depth * x_normalized
             world_y = depth * y_normalized
             world_z = depth
@@ -129,12 +127,12 @@ def main():
     # Initialize camera
     camera = setup_camera()
     
-    # Updated camera parameters for better accuracy
+    # Updated camera parameters with camera at origin
     camera_params = {
         'focal_length': 3280,  # Based on full resolution
-        'baseline': 0.1,       # Update this based on actual measurement
-        'cx': 3280 // 2,      # Center of image x
-        'cy': 2464 // 2       # Center of image y
+        'baseline': 0.1,       # Distance from camera
+        'cx': 3280 // 2,      # Image center x (camera principal point)
+        'cy': 2464 // 2       # Image center y (camera principal point)
     }
     
     # Clear all pixels
@@ -284,6 +282,7 @@ def main():
         # Save results
         if valid_indices:
             valid_indices = np.array(valid_indices)
+            # Positions are already relative to camera origin
             valid_positions = np.array(valid_positions)
             np.savez("position/led_coordinates.npz", 
                     indices=valid_indices, 
