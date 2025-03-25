@@ -56,9 +56,9 @@ def main():
     # For alpha plane (YZ plane at x=0)
     for pos_alpha in alpha_positions:
         led_id_alpha = int(pos_alpha[0])
-        # Get coordinates from alpha plan (normalize to real-world scale)
-        y_alpha = pos_alpha[1] / 1920  # Scale Y coordinate
-        z_alpha = pos_alpha[2] / 1080  # Scale Z coordinate from alpha view
+        # Get coordinates from alpha plan, make camera the origin
+        y_alpha = (pos_alpha[1] - 1920/2) / 1920  # Center Y coordinate on camera
+        z_alpha = (pos_alpha[2] - 1080/2) / 1080  # Center Z coordinate on camera
         
         # Plot point on YZ plane (alpha)
         ax3.scatter(0, y_alpha, z_alpha, c='r', s=50)
@@ -69,13 +69,13 @@ def main():
             led_id_beta = int(pos_beta[0])
             if led_id_alpha == led_id_beta:
                 # Get coordinates from beta plan
-                x_beta = pos_beta[1] / 1920  # Scale X coordinate
-                z_beta = pos_beta[2] / 1080  # Scale Z coordinate from beta view
+                x_beta = (pos_beta[1] - 1920/2) / 1920  # Center X coordinate on camera
+                z_beta = (pos_beta[2] - 1080/2) / 1080  # Center Z coordinate on camera
                 
-                # Calculate final Z coordinate by averaging both views
+                # Use Z coordinate from both views
                 z_final = (z_alpha + z_beta) / 2
                 
-                # Store matched coordinates with real-world scaling
+                # Store matched coordinates with camera as origin
                 matched_leds[led_id_alpha] = {
                     "id": led_id_alpha,
                     "x": float(x_beta),    # X from beta plane
