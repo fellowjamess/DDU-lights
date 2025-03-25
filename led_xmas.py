@@ -7,6 +7,11 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+# Add these constants at the top of the file
+TOTAL_LEDS = 20
+DETECTION_THRESHOLD = 180  # Lowered for LED strips
+MIN_LED_AREA = 5  # Smaller area for LED strip lights
+
 def setup_camera():
     camera = Picamera2()
     config = camera.create_still_configuration()
@@ -30,25 +35,27 @@ def capture_images(camera, num_angles=4):
     
     return images
 
-def detect_leds(image):
+def detect_leds(image, max_leds=TOTAL_LEDS):
     """Detect bright spots (LEDs) in the image"""
     # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
     # Apply Gaussian blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (11, 11), 0)
+    blurred = cv2.GaussianBlur(gray, (7, 7), 0)  # Reduced kernel size
     
     # Threshold the image to identify bright spots
-    threshold = 200  # Adjust this value based on your LED brightness
-    _, binary = cv2.threshold(blurred, threshold, 255, cv2.THRESH_BINARY)
+    _, binary = cv2.threshold(blurred, DETECTION_THRESHOLD, 255, cv2.THRESH_BINARY)
     
     # Find contours of bright spots
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
+    # Sort contours by brightness (area as proxy)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    
     # Get centroids of detected LEDs
     led_positions = []
-    for contour in contours:
-        if cv2.contourArea(contour) > 10:  # Filter out very small spots
+    for contour in contours[:max_leds]:  # Limit to expected number of LEDs
+        if cv2.contourArea(contour) > MIN_LED_AREA:
             M = cv2.moments(contour)
             if M["m00"] != 0:
                 cx = int(M["m10"] / M["m00"])
@@ -103,6 +110,13 @@ def main():
         
         # Detect LEDs
         led_positions = detect_leds(image)
+        if len(led_positions) < TOTAL_LEDS:
+            print(f"Warning: Only found {len(led_positions)} LEDs in image {i+1}")
+            print("Try adjusting DETECTION_THRESHOLD if too few LEDs are detected")
+        elif len(led_positions) > TOTAL_LEDS:
+            print(f"Warning: Found {len(led_positions)} LEDs in image {i+1}")
+            print("Extra detections will be filtered")
+            led_positions = led_positions[:TOTAL_LEDS]
         all_leds.append(led_positions)
         
         # Draw detected LEDs on image
