@@ -142,9 +142,9 @@ def upload_music():
         
         return jsonify({
             "success": True, 
-            "tempo": round(tempo, 2),
-            "beat_count": len(beat_frames),
-            "duration": round(librosa.get_duration(y=y, sr=sr), 2)
+            "tempo": float(tempo),  # Convert numpy.float64 to Python float
+            "beat_count": int(len(beat_frames)),  # Convert numpy.int64 to Python int
+            "duration": float(librosa.get_duration(y=y, sr=sr))  # Convert to Python float
         })
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
