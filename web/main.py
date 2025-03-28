@@ -103,8 +103,8 @@ def update_all():
 def rain_animation():
     global animation_running
     while animation_running:
-        # Sort LEDs by height (z coordinate)
-        sorted_leds = sorted(led_positions, key=lambda x: x['z'], reverse=True)
+        # Sort LEDs by height (z coordinate) in ascending order (bottom to top)
+        sorted_leds = sorted(led_positions, key=lambda x: x['z'])
         
         # Create rain drop
         active_leds = []
@@ -119,7 +119,7 @@ def rain_animation():
             # Wait a bit
             time.sleep(0.05)
             
-            # Turn off previous LED if it's not the bottom one
+            # Turn off previous LED if it's not the top one
             if len(active_leds) > 3:  # Keep 3 LEDs lit as trail
                 old_led = active_leds.pop(0)
                 pixels[old_led] = (0, 0, 0)
