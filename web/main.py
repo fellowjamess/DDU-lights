@@ -429,33 +429,35 @@ def spiral_animation():
     num_leds = len(sorted_leds)
     
     # Animation parameters
-    speed = 0.15        # Animation speed
-    fade_length = 1.5   # Fade trail length
+    speed = 0.2  # Time between each LED turning on
     
     while animation_running:
-        # Create spiral wave
-        for i in range(int(num_leds * fade_length)):
+        # Turn off all LEDs
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        
+        # Turn on LEDs one by one from highest to lowest Y position
+        lit_leds = []
+        for i in range(num_leds):
             if not animation_running:
                 break
                 
-            # Clear all LEDs
-            pixels.fill((0, 0, 0))
+            # Get LED position and calculate color
+            led = sorted_leds[i]
+            height_position = i / num_leds
+            color = get_rainbow_color(height_position)
             
-            # Light up LEDs from highest to lowest Y position
-            for j in range(num_leds):
-                # Calculate position in wave (0-1)
-                pos = (i + j) % int(num_leds * fade_length)
-                fade = 1.0 - (pos / (num_leds * fade_length))
-                
-                if fade > 0:
-                    # Calculate color position based on height (Y coordinate)
-                    height_position = j / num_leds
-                    color = get_rainbow_color(height_position)
-                    color = tuple(int(c * fade) for c in color)
-                    pixels[sorted_leds[j]['id']] = color
-            
+            # Turn on this LED
+            pixels[led['id']] = color
+            lit_leds.append(led['id'])
             pixels.show()
+            
+            # Wait before turning on next LED
             time.sleep(speed)
+        
+        # Keep all LEDs on for a moment
+        if animation_running:
+            time.sleep(1.0)
 
 @app.route('/animation/start_spiral', methods=['POST'])
 def start_spiral():
