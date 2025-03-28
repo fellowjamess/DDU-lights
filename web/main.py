@@ -160,61 +160,76 @@ def beat_animation():
     y, sr = librosa.load(current_song_path)
     
     # Calculate RMS energy (volume) for each frame
-    hop_length = 512
+    hop_length = 2048  # Increased for smoother updates
     rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
-    
-    # Normalize RMS values between 0 and 1
     rms_normalized = (rms - rms.min()) / (rms.max() - rms.min())
     
     # Sort LEDs by height (z coordinate)
     sorted_leds = sorted(led_positions, key=lambda x: x['z'])
     num_leds = len(sorted_leds)
     
-    # Define colors for different intensity levels, in GBR format
+    # Define base colors (in GBR format for NeoPixels)
     colors = [
-        (0, 255, 0),    # Blue (low volume)
-        (255, 255, 0),  # Cyan
-        (255, 0, 0),    # Green
-        (255, 0, 255),  # Yellow
-        (0, 0, 255),    # Red (high volume)
+        (255, 0, 0),    # Green (bottom)
+        (255, 128, 128), # Yellow (middle)
+        (0, 0, 255)     # Red (top)
     ]
     
-    # Calculate frame timing
-    frame_duration = hop_length / sr
-    start_time = time.time()
+    def interpolate_color(color1, color2, factor):
+        """Interpolate between two colors"""
+        return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
     
     frame_idx = 0
+    update_rate = 0.1  # Slower updates
+    last_update = 0
+    
     while beat_animation_running and frame_idx < len(rms):
-        # Get current volume level
-        volume = rms_normalized[frame_idx]
+        current_time = time.time()
         
-        # Calculate how many LEDs should be lit based on volume
-        leds_to_light = int(volume * num_leds)
+        if current_time - last_update >= update_rate:
+            volume = rms_normalized[frame_idx]
+            
+            # Scale volume for more dramatic effect
+            volume = min(1.0, volume * 1.5)
+            
+            # Calculate how many LEDs to light based on volume
+            leds_to_light = int(volume * num_leds)
+            
+            # Clear all LEDs
+            pixels.fill((0, 0, 0))
+            
+            # Light LEDs with color gradient
+            for i in range(leds_to_light):
+                led = sorted_leds[i]
+                
+                # Calculate position in gradient (0 to 1)
+                gradient_pos = i / (num_leds - 1)
+                
+                # Determine which color section we're in
+                if gradient_pos < 0.5:
+                    # Interpolate between green and yellow
+                    factor = gradient_pos * 2
+                    color = interpolate_color(colors[0], colors[1], factor)
+                else:
+                    # Interpolate between yellow and red
+                    factor = (gradient_pos - 0.5) * 2
+                    color = interpolate_color(colors[1], colors[2], factor)
+                
+                # Apply volume-based brightness
+                brightness = 0.2 + (volume * 0.8)  # Minimum brightness of 20%
+                color = tuple(int(c * brightness) for c in color)
+                
+                # Add pulsing effect based on volume
+                pulse = 0.7 + (volume * 0.3)  # Pulse between 70% and 100%
+                color = tuple(int(c * pulse) for c in color)
+                
+                pixels[led['id']] = color
+            
+            pixels.show()
+            frame_idx += 1
+            last_update = current_time
         
-        # Calculate color based on volume
-        color_idx = int(volume * (len(colors) - 1))
-        main_color = colors[color_idx]
-        
-        # Turn off all LEDs first
-        pixels.fill((0, 0, 0))
-        
-        # Light up LEDs from bottom to volume level
-        for i in range(leds_to_light):
-            led = sorted_leds[i]
-            # Fade color based on height
-            intensity = 1.0 - (i / num_leds)
-            color = tuple(int(c * intensity) for c in main_color)
-            pixels[led['id']] = color
-        
-        pixels.show()
-        
-        # Calculate next frame timing
-        frame_idx += 1
-        next_frame_time = start_time + (frame_idx * frame_duration)
-        sleep_time = next_frame_time - time.time()
-        
-        if sleep_time > 0:
-            time.sleep(sleep_time)
+        time.sleep(0.01)  # Small sleep to prevent CPU overload
 
 @app.route('/start_beat_animation', methods=['POST'])
 def start_beat_animation():
