@@ -408,6 +408,84 @@ def stop_rain():
         return jsonify({"success": True, "message": "Rain animation stopped"})
     return jsonify({"success": False, "message": "No animation running"})
 
+def get_rainbow_color(position):
+    """Get rainbow color based on position (0-1)"""
+    if position < 0.2:
+        return (0, 0, 255)  # Red (in GBR format)
+    elif position < 0.4:
+        return (127, 0, 255)  # Orange
+    elif position < 0.6:
+        return (255, 0, 255)  # Yellow
+    elif position < 0.8:
+        return (255, 0, 0)  # Green
+    else:
+        return (0, 255, 0)  # Blue
+
+def spiral_animation():
+    global animation_running
+    
+    # Sort LEDs by height and calculate angles
+    leds_with_angles = []
+    for led in led_positions:
+        angle = np.arctan2(led['y'], led['x'])
+        height = led['z']
+        leds_with_angles.append({
+            'id': led['id'],
+            'angle': angle,
+            'height': height
+        })
+    
+    # Sort by height, then angle
+    sorted_leds = sorted(leds_with_angles, key=lambda x: (x['height'], x['angle']))
+    num_leds = len(sorted_leds)
+    
+    while animation_running:
+        # Create spiral wave
+        for i in range(num_leds * 2):  # Double length for smooth transition
+            if not animation_running:
+                break
+                
+            # Clear all LEDs
+            pixels.fill((0, 0, 0))
+            
+            # Light up LEDs in spiral pattern
+            for j in range(num_leds):
+                # Calculate position in wave (0-1)
+                pos = (i + j) % num_leds
+                fade = 1.0 - (pos / num_leds)
+                
+                if fade > 0:
+                    # Get rainbow color and apply fade
+                    color = get_rainbow_color(j / num_leds)
+                    color = tuple(int(c * fade) for c in color)
+                    pixels[sorted_leds[j]['id']] = color
+            
+            pixels.show()
+            time.sleep(0.05)  # Adjust speed
+
+# Add new routes for spiral animation
+@app.route('/animation/start_spiral', methods=['POST'])
+def start_spiral():
+    global animation_thread, animation_running
+    if not animation_running:
+        animation_running = True
+        animation_thread = threading.Thread(target=spiral_animation)
+        animation_thread.start()
+        return jsonify({"success": True, "message": "Spiral animation started"})
+    return jsonify({"success": False, "message": "Animation already running"})
+
+@app.route('/animation/stop_spiral', methods=['POST'])
+def stop_spiral():
+    global animation_running
+    if animation_running:
+        animation_running = False
+        if animation_thread:
+            animation_thread.join()
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        return jsonify({"success": True, "message": "Spiral animation stopped"})
+    return jsonify({"success": False, "message": "No animation running"})
+
 @app.route('/get_led_states', methods=['GET'])
 def get_led_states():
     # Return current LED states for 3D view sync

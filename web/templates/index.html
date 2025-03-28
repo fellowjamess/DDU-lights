@@ -204,6 +204,15 @@
                     <button onclick="stopRain()" id="rainStop">Stop Rain</button>
                 </div>
             </div>
+            <div class="animation-control">
+                <h3>Animations</h3>
+                <div class="control-row">
+                    <button onclick="startRain()" id="rainStart">Start Rain</button>
+                    <button onclick="stopRain()" id="rainStop">Stop Rain</button>
+                    <button onclick="startSpiral()" id="spiralStart">Start Spiral</button>
+                    <button onclick="stopSpiral()" id="spiralStop">Stop Spiral</button>
+                </div>
+            </div>
             <div class="controls-grid" id="individual-controls"></div>
         </div>
         <div id="music-container">
@@ -526,6 +535,52 @@
                       console.error('Failed to stop animation:', data.message);
                       document.getElementById('rainStart').disabled = true;
                       document.getElementById('rainStop').disabled = false;
+                  }
+              });
+        }
+
+        function startSpiral() {
+            document.getElementById('spiralStart').disabled = true;
+            document.getElementById('spiralStop').disabled = false;
+            
+            fetch('/animation/start_spiral', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      pollInterval = setInterval(pollLEDStates, 1000);
+                  } else {
+                      console.error('Failed to start spiral:', data.message);
+                      document.getElementById('spiralStart').disabled = false;
+                      document.getElementById('spiralStop').disabled = true;
+                  }
+              });
+        }
+
+        function stopSpiral() {
+            document.getElementById('spiralStart').disabled = false;
+            document.getElementById('spiralStop').disabled = true;
+            
+            fetch('/animation/stop_spiral', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      if (pollInterval) {
+                          clearInterval(pollInterval);
+                          pollInterval = null;
+                      }
+                      Object.values(lights).forEach(light => {
+                          light.material.color.set(new THREE.Color(0x000000));
+                          light.material.emissive.set(new THREE.Color(0x000000));
+                          light.material.needsUpdate = true;
+                      });
                   }
               });
         }
