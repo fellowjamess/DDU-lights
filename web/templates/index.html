@@ -246,43 +246,72 @@
         }
 
         function uploadMusic() {
-                const fileInput = document.getElementById('musicUpload');
-                const musicInfoDiv = document.getElementById('musicInfo');
-                const file = fileInput.files[0];
-                
-                if (!file) {
-                    alert('Please select a music file');
-                    return;
-                }
-                
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                fetch('/upload_music', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        musicInfoDiv.innerHTML = `
-                            <p>Tempo: ${data.tempo} BPM</p>
-                            <p>Beat Count: ${data.beat_count}</p>
-                            <p>Duration: ${data.duration} seconds</p>
-                        `;
-                        
-                        // Enable beat animation buttons
-                        document.getElementById('beatStart').disabled = false;
-                        document.getElementById('beatStop').disabled = true;
-                    } else {
-                        musicInfoDiv.innerHTML = `<p>Error: ${data.message}</p>`;
-                    }
-                })
-                .catch(error => {
-                    musicInfoDiv.innerHTML = `<p>Error: ${error}</p>`;
-                });
+            const fileInput = document.getElementById('musicUpload');
+            const musicInfoDiv = document.getElementById('musicInfo');
+            const beatStartBtn = document.getElementById('beatStart');
+            const beatStopBtn = document.getElementById('beatStop');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a music file');
+                return;
             }
-        
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/upload_music', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Log the raw response for debugging
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Parsed response data:', data);
+                
+                if (data.success) {
+                    // Update music info display
+                    musicInfoDiv.innerHTML = `
+                        <p>Tempo: ${data.tempo} BPM</p>
+                        <p>Beat Count: ${data.beat_count}</p>
+                        <p>Duration: ${data.duration} seconds</p>
+                    `;
+                    
+                    // Explicitly enable beat animation buttons
+                    beatStartBtn.disabled = false;
+                    beatStopBtn.disabled = true;
+                } else {
+                    // If success is false, show error message
+                    musicInfoDiv.innerHTML = `<p>Error: ${data.message}</p>`;
+                    
+                    // Ensure buttons remain disabled
+                    beatStartBtn.disabled = true;
+                    beatStopBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                // Log and display any network or parsing errors
+                console.error('Upload error:', error);
+                musicInfoDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+                
+                // Disable buttons on error
+                beatStartBtn.disabled = true;
+                beatStopBtn.disabled = true;
+            });
+        }
+
+        // When page loads, ensure buttons start disabled
+        document.addEventListener('DOMContentLoaded', () => {
+            const beatStartBtn = document.getElementById('beatStart');
+            const beatStopBtn = document.getElementById('beatStop');
+            
+            if (beatStartBtn) beatStartBtn.disabled = true;
+            if (beatStopBtn) beatStopBtn.disabled = true;
+        });
+                
         function startBeatAnimation() {
             document.getElementById('beatStart').disabled = true;
             document.getElementById('beatStop').disabled = false;

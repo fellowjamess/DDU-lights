@@ -112,12 +112,16 @@ def update_all():
 def upload_music():
     global current_song_path, beat_frames
     
+    print("Music upload endpoint called")  # Debug print
+    
     if 'file' not in request.files:
+        print("No file in request")  # Debug print
         return jsonify({"success": False, "message": "No file uploaded"})
     
     file = request.files['file']
     
     if file.filename == '':
+        print("No filename")  # Debug print
         return jsonify({"success": False, "message": "No selected file"})
     
     # Ensure upload directory exists
@@ -127,6 +131,7 @@ def upload_music():
     # Save the file
     filepath = os.path.join(upload_dir, file.filename)
     file.save(filepath)
+    print(f"File saved to: {filepath}")  # Debug print
     
     # Load the audio file and analyze beats
     try:
@@ -140,6 +145,8 @@ def upload_music():
         
         current_song_path = filepath
         
+        print(f"Tempo: {tempo}, Beat Count: {len(beat_frames)}")  # Debug print
+        
         return jsonify({
             "success": True, 
             "tempo": round(tempo, 2),
@@ -147,6 +154,7 @@ def upload_music():
             "duration": round(librosa.get_duration(y=y, sr=sr), 2)
         })
     except Exception as e:
+        print(f"Error processing audio: {e}")  # Debug print
         return jsonify({"success": False, "message": str(e)})
 
 def beat_animation():
