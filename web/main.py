@@ -439,9 +439,13 @@ def spiral_animation():
     sorted_leds = sorted(leds_with_angles, key=lambda x: (x['height'], x['angle']))
     num_leds = len(sorted_leds)
     
+    # Animation parameters
+    speed = 0.15        # Increased delay between frames (slower)
+    fade_length = 1.5   # Longer fade trail
+    
     while animation_running:
         # Create spiral wave
-        for i in range(num_leds * 2):  # Double length for smooth transition
+        for i in range(int(num_leds * fade_length)):
             if not animation_running:
                 break
                 
@@ -451,8 +455,8 @@ def spiral_animation():
             # Light up LEDs in spiral pattern
             for j in range(num_leds):
                 # Calculate position in wave (0-1)
-                pos = (i + j) % num_leds
-                fade = 1.0 - (pos / num_leds)
+                pos = (i + j) % int(num_leds * fade_length)
+                fade = 1.0 - (pos / (num_leds * fade_length))
                 
                 if fade > 0:
                     # Get rainbow color and apply fade
@@ -461,9 +465,8 @@ def spiral_animation():
                     pixels[sorted_leds[j]['id']] = color
             
             pixels.show()
-            time.sleep(0.05)  # Adjust speed
+            time.sleep(speed)  # Slower animation speed
 
-# Add new routes for spiral animation
 @app.route('/animation/start_spiral', methods=['POST'])
 def start_spiral():
     global animation_thread, animation_running
