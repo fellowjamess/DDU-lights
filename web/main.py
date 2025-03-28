@@ -17,6 +17,10 @@ beat_animation_thread = None
 current_song_path = None
 beat_frames = None
 
+# Global variables for volume visualization
+volume_animation_running = False
+volume_animation_thread = None
+current_audio_path = None
 
 # NeoPixel setup
 pixel_pin = board.D18
@@ -149,7 +153,29 @@ def upload_music():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
-# Add this new function for volume visualization
+def interpolate_color(color1, color2, factor):
+    """Create a smooth gradient between two colors"""
+    return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
+
+def get_gradient_color(position, volume):
+    """Get color from gradient based on height position"""
+    # Define base colors in GBR format (NeoPixel order)
+    GREEN = (255, 0, 0)      # Bottom
+    YELLOW = (255, 255, 0)   # Middle
+    RED = (0, 0, 255)        # Top
+    
+    # Create gradient
+    if position < 0.5:
+        # Gradient from green to yellow
+        color = interpolate_color(GREEN, YELLOW, position * 2)
+    else:
+        # Gradient from yellow to red
+        color = interpolate_color(YELLOW, RED, (position - 0.5) * 2)
+    
+    # Apply volume-based brightness
+    brightness = 0.2 + (volume * 0.8)  # Minimum 20% brightness
+    return tuple(int(c * brightness) for c in color)
+
 def beat_animation():
     global animation_running, beat_animation_running, current_song_path
     
@@ -159,77 +185,49 @@ def beat_animation():
     # Load audio file
     y, sr = librosa.load(current_song_path)
     
-    # Calculate RMS energy (volume) for each frame
-    hop_length = 2048  # Increased for smoother updates
+    # Calculate RMS energy (volume)
+    hop_length = 2048
     rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
     rms_normalized = (rms - rms.min()) / (rms.max() - rms.min())
     
-    # Sort LEDs by height (z coordinate)
+    # Sort LEDs by height
     sorted_leds = sorted(led_positions, key=lambda x: x['z'])
     num_leds = len(sorted_leds)
     
-    # Define base colors (in GBR format for NeoPixels)
-    colors = [
-        (255, 0, 0),    # Green (bottom)
-        (255, 128, 128), # Yellow (middle)
-        (0, 0, 255)     # Red (top)
-    ]
-    
-    def interpolate_color(color1, color2, factor):
-        """Interpolate between two colors"""
-        return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
-    
     frame_idx = 0
-    update_rate = 0.1  # Slower updates
+    update_rate = 0.1
     last_update = 0
     
     while beat_animation_running and frame_idx < len(rms):
         current_time = time.time()
         
         if current_time - last_update >= update_rate:
-            volume = rms_normalized[frame_idx]
-            
-            # Scale volume for more dramatic effect
-            volume = min(1.0, volume * 1.5)
-            
-            # Calculate how many LEDs to light based on volume
-            leds_to_light = int(volume * num_leds)
+            # Get current volume level and scale it
+            volume = min(1.0, rms_normalized[frame_idx] * 1.5)
             
             # Clear all LEDs
             pixels.fill((0, 0, 0))
             
-            # Light LEDs with color gradient
+            # Calculate how many LEDs to light based on volume
+            leds_to_light = int(volume * num_leds)
+            
+            # Light LEDs with gradient
             for i in range(leds_to_light):
-                led = sorted_leds[i]
-                
                 # Calculate position in gradient (0 to 1)
-                gradient_pos = i / (num_leds - 1)
+                position = i / (num_leds - 1)
                 
-                # Determine which color section we're in
-                if gradient_pos < 0.5:
-                    # Interpolate between green and yellow
-                    factor = gradient_pos * 2
-                    color = interpolate_color(colors[0], colors[1], factor)
-                else:
-                    # Interpolate between yellow and red
-                    factor = (gradient_pos - 0.5) * 2
-                    color = interpolate_color(colors[1], colors[2], factor)
+                # Get color from gradient
+                color = get_gradient_color(position, volume)
                 
-                # Apply volume-based brightness
-                brightness = 0.2 + (volume * 0.8)  # Minimum brightness of 20%
-                color = tuple(int(c * brightness) for c in color)
-                
-                # Add pulsing effect based on volume
-                pulse = 0.7 + (volume * 0.3)  # Pulse between 70% and 100%
-                color = tuple(int(c * pulse) for c in color)
-                
+                # Set LED color
+                led = sorted_leds[i]
                 pixels[led['id']] = color
             
             pixels.show()
             frame_idx += 1
             last_update = current_time
         
-        time.sleep(0.01)  # Small sleep to prevent CPU overload
+        time.sleep(0.01)
 
 @app.route('/start_beat_animation', methods=['POST'])
 def start_beat_animation():
@@ -264,6 +262,93 @@ def stop_beat_animation():
     
     return jsonify({"success": False, "message": "No animation running"})
 
+def get_led_color(position, volume):
+    """Get color based on LED position with volume-based brightness"""
+    # Define colors in GBR format (NeoPixel order)
+    GREEN = (255, 0, 0)      # Bottom section
+    YELLOW = (255, 255, 0)   # Middle section
+    RED = (0, 0, 255)        # Top section
+    
+    if position < 0.33:
+        return tuple(int(c * volume) for c in GREEN)
+    elif position < 0.66:
+        return tuple(int(c * volume) for c in YELLOW)
+    else:
+        return tuple(int(c * volume) for c in RED)
+
+def volume_animation():
+    global volume_animation_running, current_audio_path
+    
+    if not current_audio_path:
+        return
+    
+    # Load and analyze audio
+    y, sr = librosa.load(current_audio_path)
+    hop_length = 2048  # Analyze in larger chunks for smoother visualization
+    rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+    rms_normalized = (rms - rms.min()) / (rms.max() - rms.min())
+    
+    # Sort LEDs by height
+    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
+    num_leds = len(sorted_leds)
+    
+    frame_idx = 0
+    update_rate = 0.1  # Update every 100ms
+    last_update = 0
+    
+    while volume_animation_running and frame_idx < len(rms):
+        current_time = time.time()
+        
+        if current_time - last_update >= update_rate:
+            # Get current volume
+            volume = min(1.0, rms_normalized[frame_idx] * 1.2)
+            
+            # Light LEDs based on volume
+            pixels.fill((0, 0, 0))
+            leds_to_light = int(volume * num_leds)
+            
+            for i in range(leds_to_light):
+                position = i / num_leds
+                led = sorted_leds[i]
+                color = get_led_color(position, volume)
+                pixels[led['id']] = color
+            
+            pixels.show()
+            frame_idx += 1
+            last_update = current_time
+        
+        time.sleep(0.01)
+
+@app.route('/upload_audio', methods=['POST'])
+def upload_audio():
+    global current_audio_path
+    
+    if 'file' not in request.files:
+        return jsonify({"success": False, "message": "No file uploaded"})
+    
+    file = request.files['file']
+    filepath = f"uploads/{file.filename}"
+    file.save(filepath)
+    current_audio_path = filepath
+    
+    return jsonify({"success": True})
+
+@app.route('/start_volume_animation')
+def start_volume_animation():
+    global volume_animation_running, volume_animation_thread
+    
+    if not volume_animation_running:
+        volume_animation_running = True
+        volume_animation_thread = threading.Thread(target=volume_animation)
+        volume_animation_thread.start()
+    
+    return jsonify({"success": True})
+
+@app.route('/stop_volume_animation')
+def stop_volume_animation():
+    global volume_animation_running
+    volume_animation_running = False
+    return jsonify({"success": True})
 
 def rain_animation():
     global animation_running
