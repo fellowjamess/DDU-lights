@@ -425,7 +425,7 @@ def spiral_animation():
     global animation_running
     
     # Sort LEDs by Y coordinate in descending order (highest to lowest)
-    sorted_leds = sorted(led_positions, key=lambda x: x['y'], reverse=True)
+    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
     num_leds = len(sorted_leds)
     
     # Animation parameters
