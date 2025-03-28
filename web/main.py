@@ -424,24 +424,13 @@ def get_rainbow_color(position):
 def spiral_animation():
     global animation_running
     
-    # Sort LEDs by height and calculate angles
-    leds_with_angles = []
-    for led in led_positions:
-        angle = np.arctan2(led['y'], led['x'])
-        height = led['z']
-        leds_with_angles.append({
-            'id': led['id'],
-            'angle': angle,
-            'height': height
-        })
-    
-    # Sort by height, then angle
-    sorted_leds = sorted(leds_with_angles, key=lambda x: (x['height'], x['angle']))
+    # Sort LEDs by Y coordinate in descending order (highest to lowest)
+    sorted_leds = sorted(led_positions, key=lambda x: x['y'], reverse=True)
     num_leds = len(sorted_leds)
     
     # Animation parameters
-    speed = 0.15        # Increased delay between frames (slower)
-    fade_length = 1.5   # Longer fade trail
+    speed = 0.15        # Animation speed
+    fade_length = 1.5   # Fade trail length
     
     while animation_running:
         # Create spiral wave
@@ -452,20 +441,21 @@ def spiral_animation():
             # Clear all LEDs
             pixels.fill((0, 0, 0))
             
-            # Light up LEDs in spiral pattern
+            # Light up LEDs from highest to lowest Y position
             for j in range(num_leds):
                 # Calculate position in wave (0-1)
                 pos = (i + j) % int(num_leds * fade_length)
                 fade = 1.0 - (pos / (num_leds * fade_length))
                 
                 if fade > 0:
-                    # Get rainbow color and apply fade
-                    color = get_rainbow_color(j / num_leds)
+                    # Calculate color position based on height (Y coordinate)
+                    height_position = j / num_leds
+                    color = get_rainbow_color(height_position)
                     color = tuple(int(c * fade) for c in color)
                     pixels[sorted_leds[j]['id']] = color
             
             pixels.show()
-            time.sleep(speed)  # Slower animation speed
+            time.sleep(speed)
 
 @app.route('/animation/start_spiral', methods=['POST'])
 def start_spiral():
