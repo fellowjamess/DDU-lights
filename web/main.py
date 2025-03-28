@@ -12,12 +12,6 @@ import librosa
 
 app = Flask(__name__)
 
-beat_animation_running = False
-beat_animation_thread = None
-current_song_path = None
-beat_frames = None
-
-# Global variables for volume visualization
 volume_animation_running = False
 volume_animation_thread = None
 current_audio_path = None
@@ -176,91 +170,6 @@ def get_gradient_color(position, volume):
     brightness = 0.2 + (volume * 0.8)  # Minimum 20% brightness
     return tuple(int(c * brightness) for c in color)
 
-def beat_animation():
-    global animation_running, beat_animation_running, current_song_path
-    
-    if not current_song_path:
-        return
-    
-    # Load audio file
-    y, sr = librosa.load(current_song_path)
-    
-    # Calculate RMS energy (volume)
-    hop_length = 2048
-    rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
-    rms_normalized = (rms - rms.min()) / (rms.max() - rms.min())
-    
-    # Sort LEDs by height
-    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
-    num_leds = len(sorted_leds)
-    
-    frame_idx = 0
-    update_rate = 0.1
-    last_update = 0
-    
-    while beat_animation_running and frame_idx < len(rms):
-        current_time = time.time()
-        
-        if current_time - last_update >= update_rate:
-            # Get current volume level and scale it
-            volume = min(1.0, rms_normalized[frame_idx] * 1.5)
-            
-            # Clear all LEDs
-            pixels.fill((0, 0, 0))
-            
-            # Calculate how many LEDs to light based on volume
-            leds_to_light = int(volume * num_leds)
-            
-            # Light LEDs with gradient
-            for i in range(leds_to_light):
-                # Calculate position in gradient (0 to 1)
-                position = i / (num_leds - 1)
-                
-                # Get color from gradient
-                color = get_gradient_color(position, volume)
-                
-                # Set LED color
-                led = sorted_leds[i]
-                pixels[led['id']] = color
-            
-            pixels.show()
-            frame_idx += 1
-            last_update = current_time
-        
-        time.sleep(0.01)
-
-@app.route('/start_beat_animation', methods=['POST'])
-def start_beat_animation():
-    global beat_animation_thread, beat_animation_running
-    
-    if not current_song_path or beat_frames is None:
-        return jsonify({"success": False, "message": "No music uploaded"})
-    
-    if not beat_animation_running:
-        beat_animation_running = True
-        beat_animation_thread = threading.Thread(target=beat_animation)
-        beat_animation_thread.start()
-        return jsonify({"success": True, "message": "Beat animation started"})
-    
-    return jsonify({"success": False, "message": "Animation already running"})
-
-@app.route('/stop_beat_animation', methods=['POST'])
-def stop_beat_animation():
-    global beat_animation_running
-    
-    if beat_animation_running:
-        beat_animation_running = False
-        # Wait for thread to finish
-        if beat_animation_thread:
-            beat_animation_thread.join()
-        
-        # Turn off all LEDs
-        pixels.fill((0, 0, 0))
-        pixels.show()
-        
-        return jsonify({"success": True, "message": "Beat animation stopped"})
-    
-    return jsonify({"success": False, "message": "No animation running"})
 
 def get_led_color(position, volume):
     """Get color based on LED position with volume-based brightness"""
@@ -275,80 +184,6 @@ def get_led_color(position, volume):
         return tuple(int(c * volume) for c in YELLOW)
     else:
         return tuple(int(c * volume) for c in RED)
-
-def volume_animation():
-    global volume_animation_running, current_audio_path
-    
-    if not current_audio_path:
-        return
-    
-    # Load and analyze audio
-    y, sr = librosa.load(current_audio_path)
-    hop_length = 2048  # Analyze in larger chunks for smoother visualization
-    rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
-    rms_normalized = (rms - rms.min()) / (rms.max() - rms.min())
-    
-    # Sort LEDs by height
-    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
-    num_leds = len(sorted_leds)
-    
-    frame_idx = 0
-    update_rate = 0.1  # Update every 100ms
-    last_update = 0
-    
-    while volume_animation_running and frame_idx < len(rms):
-        current_time = time.time()
-        
-        if current_time - last_update >= update_rate:
-            # Get current volume
-            volume = min(1.0, rms_normalized[frame_idx] * 1.2)
-            
-            # Light LEDs based on volume
-            pixels.fill((0, 0, 0))
-            leds_to_light = int(volume * num_leds)
-            
-            for i in range(leds_to_light):
-                position = i / num_leds
-                led = sorted_leds[i]
-                color = get_led_color(position, volume)
-                pixels[led['id']] = color
-            
-            pixels.show()
-            frame_idx += 1
-            last_update = current_time
-        
-        time.sleep(0.01)
-
-@app.route('/upload_audio', methods=['POST'])
-def upload_audio():
-    global current_audio_path
-    
-    if 'file' not in request.files:
-        return jsonify({"success": False, "message": "No file uploaded"})
-    
-    file = request.files['file']
-    filepath = f"uploads/{file.filename}"
-    file.save(filepath)
-    current_audio_path = filepath
-    
-    return jsonify({"success": True})
-
-@app.route('/start_volume_animation')
-def start_volume_animation():
-    global volume_animation_running, volume_animation_thread
-    
-    if not volume_animation_running:
-        volume_animation_running = True
-        volume_animation_thread = threading.Thread(target=volume_animation)
-        volume_animation_thread.start()
-    
-    return jsonify({"success": True})
-
-@app.route('/stop_volume_animation')
-def stop_volume_animation():
-    global volume_animation_running
-    volume_animation_running = False
-    return jsonify({"success": True})
 
 def rain_animation():
     global animation_running
