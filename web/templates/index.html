@@ -95,18 +95,80 @@
             cursor: not-allowed;
         }
         .music-control {
-                width: 100%;
-                margin-bottom: 20px;
-                padding: 15px;
-                background-color: #e0e0e0;
-                border-radius: 5px;
-            }
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
         
-            #musicInfo {
-                font-size: 14px;
-                color: #333;
-            }
+        #musicInfo {
+            font-size: 14px;
+            color: #333;
+        }
 
+        .music-control {
+            width: 100%;
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(145deg, #2c3e50, #3498db);
+            border-radius: 10px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .music-control h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .music-upload {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        #musicUpload {
+            padding: 10px;
+            border-radius: 5px;
+            background: white;
+        }
+
+        .music-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        #beatStart, #beatStop {
+            padding: 12px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #beatStart {
+            background: #2ecc71;
+            color: white;
+        }
+
+        #beatStop {
+            background: #e74c3c;
+            color: white;
+        }
+
+        #musicInfo {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -132,16 +194,16 @@
         </div>
         <div class="music-control">
             <h3>Music Beat Visualization</h3>
-            <div class="control-row">
+            <div class="music-upload">
                 <input type="file" id="musicUpload" accept="audio/*">
-                <button onclick="uploadMusic()">Upload Music</button>
+                <button onclick="uploadMusic()" class="upload-btn">Upload</button>
             </div>
-            <div id="musicInfo" style="margin-top: 10px;">
+            <div id="musicInfo">
                 <!-- Music info will be displayed here -->
             </div>
-            <div class="control-row">
-                <button onclick="startBeatAnimation()" id="beatStart">Start Beat Animation</button>
-                <button onclick="stopBeatAnimation()" id="beatStop">Stop Beat Animation</button>
+            <div class="music-buttons">
+                <button onclick="startBeatAnimation()" id="beatStart">Start Beat Show</button>
+                <button onclick="stopBeatAnimation()" id="beatStop">Stop Beat Show</button>
             </div>
         </div>
         

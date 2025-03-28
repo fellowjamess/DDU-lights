@@ -156,37 +156,50 @@ def beat_animation():
         return
     
     y, sr = librosa.load(current_song_path)
-    
-    # Sort LEDs by height for vertical beat visualization
-    sorted_leds = sorted(led_positions, key=lambda x: x['z'], reverse=True)
-    
     beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+    
+    # Define vibrant colors for the animation
+    colors = [
+        (255, 0, 0),    # Red
+        (0, 255, 0),    # Green
+        (0, 0, 255),    # Blue
+        (255, 255, 0),  # Yellow
+        (255, 0, 255),  # Magenta
+        (0, 255, 255),  # Cyan
+    ]
+    
+    # Sort LEDs by height for vertical wave effect
+    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
     
     while beat_animation_running:
         for beat_time in beat_times:
             if not beat_animation_running:
                 break
             
-            # Select a few LEDs to light up on beat
-            beat_leds = sorted_leds[:3]  # Top 3 LEDs
-            
-            for led in beat_leds:
+            # Create wave effect
+            for i, led in enumerate(sorted_leds):
                 led_id = led['id']
-                # Bright green for beats
-                pixels[led_id] = (0, 255, 0)
+                # Choose color based on position and time
+                color_idx = (i + int(time.time() * 5)) % len(colors)
+                pixels[led_id] = colors[color_idx]
+                pixels.show()
+                time.sleep(0.02)  # Quick wave effect
             
+            # Flash all LEDs on beat
+            color = random.choice(colors)
+            pixels.fill(color)
             pixels.show()
-            time.sleep(0.1)  # Brief flash
+            time.sleep(0.1)
             
-            # Turn off beat LEDs
-            for led in beat_leds:
-                led_id = led['id']
+            # Create falling effect
+            for i in range(len(sorted_leds)-1, -1, -1):
+                led_id = sorted_leds[i]['id']
                 pixels[led_id] = (0, 0, 0)
+                pixels.show()
+                time.sleep(0.02)
             
-            pixels.show()
-            
-            # Wait until next beat (or close to it)
-            time.sleep(max(0, beat_time - 0.1))
+            # Wait until next beat
+            time.sleep(max(0, beat_time - 0.3))
 
 @app.route('/start_beat_animation', methods=['POST'])
 def start_beat_animation():
