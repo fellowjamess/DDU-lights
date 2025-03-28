@@ -7,8 +7,16 @@ import os
 import threading
 import time
 import random
+import librosa
+
 
 app = Flask(__name__)
+
+beat_animation_running = False
+beat_animation_thread = None
+current_song_path = None
+beat_frames = None
+
 
 # NeoPixel setup
 pixel_pin = board.D18
@@ -99,6 +107,120 @@ def update_all():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+@app.route('/upload_music', methods=['POST'])
+def upload_music():
+    global current_song_path, beat_frames
+    
+    if 'file' not in request.files:
+        return jsonify({"success": False, "message": "No file uploaded"})
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({"success": False, "message": "No selected file"})
+    
+    # Ensure upload directory exists
+    upload_dir = 'uploads'
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Save the file
+    filepath = os.path.join(upload_dir, file.filename)
+    file.save(filepath)
+    
+    # Load the audio file and analyze beats
+    try:
+        y, sr = librosa.load(filepath)
+        
+        # Detect beats
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        
+        # Convert beat frames to times
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        
+        current_song_path = filepath
+        
+        return jsonify({
+            "success": True, 
+            "tempo": round(tempo, 2),
+            "beat_count": len(beat_frames),
+            "duration": round(librosa.get_duration(y=y, sr=sr), 2)
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+def beat_animation():
+    global animation_running, beat_animation_running, beat_frames, current_song_path
+    
+    if not current_song_path or beat_frames is None:
+        return
+    
+    y, sr = librosa.load(current_song_path)
+    
+    # Sort LEDs by height for vertical beat visualization
+    sorted_leds = sorted(led_positions, key=lambda x: x['z'], reverse=True)
+    
+    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+    
+    while beat_animation_running:
+        for beat_time in beat_times:
+            if not beat_animation_running:
+                break
+            
+            # Select a few LEDs to light up on beat
+            beat_leds = sorted_leds[:3]  # Top 3 LEDs
+            
+            for led in beat_leds:
+                led_id = led['id']
+                # Bright green for beats
+                pixels[led_id] = (0, 255, 0)
+            
+            pixels.show()
+            time.sleep(0.1)  # Brief flash
+            
+            # Turn off beat LEDs
+            for led in beat_leds:
+                led_id = led['id']
+                pixels[led_id] = (0, 0, 0)
+            
+            pixels.show()
+            
+            # Wait until next beat (or close to it)
+            time.sleep(max(0, beat_time - 0.1))
+
+@app.route('/start_beat_animation', methods=['POST'])
+def start_beat_animation():
+    global beat_animation_thread, beat_animation_running
+    
+    if not current_song_path or beat_frames is None:
+        return jsonify({"success": False, "message": "No music uploaded"})
+    
+    if not beat_animation_running:
+        beat_animation_running = True
+        beat_animation_thread = threading.Thread(target=beat_animation)
+        beat_animation_thread.start()
+        return jsonify({"success": True, "message": "Beat animation started"})
+    
+    return jsonify({"success": False, "message": "Animation already running"})
+
+@app.route('/stop_beat_animation', methods=['POST'])
+def stop_beat_animation():
+    global beat_animation_running
+    
+    if beat_animation_running:
+        beat_animation_running = False
+        # Wait for thread to finish
+        if beat_animation_thread:
+            beat_animation_thread.join()
+        
+        # Turn off all LEDs
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        
+        return jsonify({"success": True, "message": "Beat animation stopped"})
+    
+    return jsonify({"success": False, "message": "No animation running"})
+
 
 def rain_animation():
     global animation_running
