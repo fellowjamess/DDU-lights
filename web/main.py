@@ -149,57 +149,72 @@ def upload_music():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
+# Add this new function for volume visualization
 def beat_animation():
-    global animation_running, beat_animation_running, beat_frames, current_song_path
+    global animation_running, beat_animation_running, current_song_path
     
-    if not current_song_path or beat_frames is None:
+    if not current_song_path:
         return
     
+    # Load audio file
     y, sr = librosa.load(current_song_path)
-    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
     
-    # Define vibrant colors for the animation
+    # Calculate RMS energy (volume) for each frame
+    hop_length = 512
+    rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+    
+    # Normalize RMS values between 0 and 1
+    rms_normalized = (rms - rms.min()) / (rms.max() - rms.min())
+    
+    # Sort LEDs by height (z coordinate)
+    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
+    num_leds = len(sorted_leds)
+    
+    # Define colors for different intensity levels, in GBR format
     colors = [
-        (255, 0, 0),    # Red
-        (0, 255, 0),    # Green
-        (0, 0, 255),    # Blue
-        (255, 255, 0),  # Yellow
-        (255, 0, 255),  # Magenta
-        (0, 255, 255),  # Cyan
+        (0, 255, 0),    # Blue (low volume)
+        (255, 255, 0),  # Cyan
+        (255, 0, 0),    # Green
+        (255, 0, 255),  # Yellow
+        (0, 0, 255),    # Red (high volume)
     ]
     
-    # Sort LEDs by height for vertical wave effect
-    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
+    # Calculate frame timing
+    frame_duration = hop_length / sr
+    start_time = time.time()
     
-    while beat_animation_running:
-        for beat_time in beat_times:
-            if not beat_animation_running:
-                break
-            
-            # Create wave effect
-            for i, led in enumerate(sorted_leds):
-                led_id = led['id']
-                # Choose color based on position and time
-                color_idx = (i + int(time.time() * 5)) % len(colors)
-                pixels[led_id] = colors[color_idx]
-                pixels.show()
-                time.sleep(0.02)  # Quick wave effect
-            
-            # Flash all LEDs on beat
-            color = random.choice(colors)
-            pixels.fill(color)
-            pixels.show()
-            time.sleep(0.1)
-            
-            # Create falling effect
-            for i in range(len(sorted_leds)-1, -1, -1):
-                led_id = sorted_leds[i]['id']
-                pixels[led_id] = (0, 0, 0)
-                pixels.show()
-                time.sleep(0.02)
-            
-            # Wait until next beat
-            time.sleep(max(0, beat_time - 0.3))
+    frame_idx = 0
+    while beat_animation_running and frame_idx < len(rms):
+        # Get current volume level
+        volume = rms_normalized[frame_idx]
+        
+        # Calculate how many LEDs should be lit based on volume
+        leds_to_light = int(volume * num_leds)
+        
+        # Calculate color based on volume
+        color_idx = int(volume * (len(colors) - 1))
+        main_color = colors[color_idx]
+        
+        # Turn off all LEDs first
+        pixels.fill((0, 0, 0))
+        
+        # Light up LEDs from bottom to volume level
+        for i in range(leds_to_light):
+            led = sorted_leds[i]
+            # Fade color based on height
+            intensity = 1.0 - (i / num_leds)
+            color = tuple(int(c * intensity) for c in main_color)
+            pixels[led['id']] = color
+        
+        pixels.show()
+        
+        # Calculate next frame timing
+        frame_idx += 1
+        next_frame_time = start_time + (frame_idx * frame_duration)
+        sleep_time = next_frame_time - time.time()
+        
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
 @app.route('/start_beat_animation', methods=['POST'])
 def start_beat_animation():
