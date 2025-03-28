@@ -57,8 +57,8 @@ def main():
     for pos_alpha in alpha_positions:
         led_id_alpha = int(pos_alpha[0])
         # Get coordinates from alpha plan, make camera the origin
-        y_alpha = (pos_alpha[1] - 1920/2) / 100  # Center Y coordinate on camera
-        z_alpha = (pos_alpha[2] - 1080/2) / 100  # Center Z coordinate on camera
+        y_alpha = (pos_alpha[1] - 1920/2) / 300  # Center Y coordinate on camera
+        z_alpha = (pos_alpha[2] - 1080/2) / 300  # Center Z coordinate on camera
         
         # Plot point on YZ plane (alpha)
         ax3.scatter(0, y_alpha, z_alpha, c='r', s=50)
@@ -69,8 +69,8 @@ def main():
             led_id_beta = int(pos_beta[0])
             if led_id_alpha == led_id_beta:
                 # Get coordinates from beta plan
-                x_beta = (pos_beta[1] - 1920/2) / 100  # Center X coordinate on camera
-                z_beta = (pos_beta[2] - 1080/2) / 100  # Center Z coordinate on camera
+                x_beta = (pos_beta[1] - 1920/2) / 300  # Center X coordinate on camera
+                z_beta = (pos_beta[2] - 1080/2) / 300  # Center Z coordinate on camera
                 
                 # Use Z coordinate from both views
                 z_final = (z_alpha + z_beta) / 2
