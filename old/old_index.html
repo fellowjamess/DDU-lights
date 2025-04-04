@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LED Control Dashboard</title>
+    <style>
+        .led-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px;
+        }
+        .led-control {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="led-grid" id="ledControls"></div>
+
+    <script>
+        const numLEDs = 40;
+        const ledGrid = document.getElementById('ledControls');
+
+        // Create LED controls
+        for (let i = 0; i < numLEDs; i++) {
+            const div = document.createElement('div');
+            div.className = 'led-control';
+            div.innerHTML = `
+                <h3>LED ${i}</h3>
+                <input type="color" id="color-${i}" value="#000000">
+                <button onclick="updateLED(${i})">Update</button>
+            `;
+            ledGrid.appendChild(div);
+        }
+
+        // Loads the LED states from the server
+        // and sets the color inputs accordingly
+        function loadLEDStates() {
+            fetch('/api/getStates')
+                .then(response => response.json())
+                .then(states => {
+                    for (const [led, color] of Object.entries(states)) {
+                        const colorInput = document.getElementById(`color-${led}`);
+                        if (colorInput) {
+                            colorInput.value = color;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading LED states:', error));
+        }
+
+        function updateLED(id) {
+            const color = document.getElementById(`color-${id}`).value;
+            console.log(`Updating LED ${id} to color ${color}`);
+            
+            fetch('/api/updateLights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: 'update',
+                    led: id,
+                    color: color
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Error updating LED:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Load LED states when page loads
+        document.addEventListener('DOMContentLoaded', loadLEDStates);
+    </script>
+</body>
+</html>
