@@ -38,7 +38,7 @@
         // Loads the LED states from the server
         // and sets the color inputs accordingly
         function loadLEDStates() {
-            fetch('/api/states')
+            fetch('/api/getStates')
                 .then(response => response.json())
                 .then(states => {
                     for (const [led, color] of Object.entries(states)) {
@@ -55,7 +55,7 @@
             const color = document.getElementById(`color-${id}`).value;
             console.log(`Updating LED ${id} to color ${color}`);
             
-            fetch('/api/lights', {
+            fetch('/api/updateLights', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

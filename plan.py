@@ -8,7 +8,7 @@ import os
 
 # NeoPixel setup
 pixel_pin = board.D18
-num_pixels = 20  # Adjust based on your LED strip
+num_pixels = 40  # We have 40 LEDs
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False
 )
@@ -27,17 +27,14 @@ def detect_led_position(frame, i, angle_name):
     # Convert to HSV for better LED detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # GBR order for NeoPixel - Blue detection
-    lower_blue = np.array([100, 100, 100])  # Blue HSV range
-    upper_blue = np.array([140, 255, 255])  # Blue HSV range
+    # GBR order for NeoPixel and blue detection
+    lower_blue = np.array([100, 100, 100])  # Lower blue HSV range
+    upper_blue = np.array([140, 255, 255])  # Upper blue HSV range
     
     # Create mask for blue color
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
     
-    # Create data folder and subfolders
-    if not os.path.exists('data'):
-        os.makedirs('data')
-    
+    # Create orther data folders if they don't exist
     folder_prefix = 'alpha' if angle_name == 'alpha' else 'beta'
     for folder in [f'data/{folder_prefix}_mask', f'data/{folder_prefix}_contours']:
         if not os.path.exists(folder):
@@ -87,7 +84,7 @@ def capture_plan(camera, angle_name):
         time.sleep(0.2)
         
         # Turn on single LED with blue color (GBR format)
-        pixels[i] = (0, 255, 0)  # Blue in GBR format (0=Green, 255=Blue, 0=Red)
+        pixels[i] = (0, 255, 0)  # Blue in GBR format
         pixels.brightness = 1.0
         pixels.show()
         time.sleep(0.3)
@@ -128,15 +125,28 @@ def main():
         print("Please ensure camera is in initial position")
         input("Press Enter to continue...")
         alpha_positions = capture_plan(camera, "alpha")
-        
-        # Wait for camera rotation
+
+        # Wait for the user to press enter and blink LEDs red to indicate rotation
         print("\nPlease rotate camera 90 degrees")
-        input("Press Enter when camera is rotated...")
-        
+        while True:
+            # Visual feedback for rotation
+            # Turn LEDs red
+            pixels.fill((0, 0, 255))
+            pixels.show()
+            time.sleep(0.5)
+            # Turn LEDs off
+            pixels.fill((0, 0, 0))
+            pixels.show()
+            time.sleep(0.5)
+            # Check for input
+            if input("Press Enter when camera is rotated"): 
+                break
+        pixels.fill((0, 0, 0))
+        pixels.show()
         # Second capture (beta plan - 90 degrees)
         print("Capturing beta plan (90 degrees)")
         beta_positions = capture_plan(camera, "beta")
-        
+
         # Print results
         print("\nAlpha plan coordinates:")
         for i, x, y in alpha_positions:

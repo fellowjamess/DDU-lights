@@ -28,7 +28,7 @@ async def connect_to_server():
                     "states": led_states
                 }
                 await websocket.send(json.dumps(states_message))
-                
+
                 while True:
                     try:
                         msg = await websocket.recv()

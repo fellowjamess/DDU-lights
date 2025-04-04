@@ -12,12 +12,12 @@ import (
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			return true // Allow all connections in dev
+			return true // Allow all connections
 		},
 	}
 	// Stores the connected Pi clients, should only be one in this case
 	clients = make(map[*websocket.Conn]bool)
-	// Add LED states storage
+
 	ledStates      = make(map[int]string) // map[LED_ID]Color
 	ledStatesMutex sync.RWMutex
 )
@@ -35,7 +35,6 @@ type StatusMessage struct {
 	Success bool   `json:"success"`
 }
 
-// Add new type for LED states
 type LEDStates struct {
 	Type   string            `json:"type"`
 	States map[string]string `json:"states"`
@@ -45,8 +44,8 @@ func handleHome(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }
 
-// Update handleWebSocket function:
 func handleWebSocket(c *gin.Context) {
+	// WebSocket handshake with the client
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v\n", err)
@@ -134,14 +133,14 @@ func main() {
 	r := gin.Default()
 
 	// Serve static files
-	r.Static("/static", "./static")
+	// r.Static("/static", "./static")
 	r.LoadHTMLGlob("templates/*")
 
 	// Routes
 	r.GET("/", handleHome)
 	r.GET("/ws", handleWebSocket)
-	r.POST("/api/lights", handleLightUpdate)
-	r.GET("/api/states", handleGetStates) // Add new endpoint
+	r.POST("/api/updateLights", handleLightUpdate)
+	r.GET("/api/getStates", handleGetStates)
 
 	log.Println("Server starting on port 80...")
 	r.Run(":80")
