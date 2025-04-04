@@ -74,8 +74,7 @@
             <div class="all-leds-control">
                 <h3>All LEDs</h3>
                 <div class="control-row">
-                    <input type="color" id="all-color" value="#000000">
-                    <button onclick="updateAll()">Update All</button>
+                    <input type="color" id="all-color" value="#000000" oninput="updateAll()">
                 </div>
             </div>
 
@@ -167,8 +166,7 @@
                 div.className = 'led-control';
                 div.innerHTML = `
                     <h3>LED ${i}</h3>
-                    <input type="color" id="color-${i}" value="#000000">
-                    <button onclick="updateLED(${i})">Update</button>
+                    <input type="color" id="color-${i}" value="#000000" oninput="updateLED(${i})">
                 `;
                 ledGrid.appendChild(div);
             }
@@ -200,7 +198,8 @@
 
         function updateLED(id) {
             const color = document.getElementById(`color-${id}`).value;
-            
+            const rgbColor = new THREE.Color(color);
+
             fetch('/api/updateLights', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

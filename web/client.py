@@ -108,7 +108,7 @@ async def connect_to_server():
                     try:
                         msg = await websocket.recv()
                         command = json.loads(msg)
-                        
+
                         success = await handle_command(command)
                         
                         # Send status update
