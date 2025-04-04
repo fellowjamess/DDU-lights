@@ -12,11 +12,9 @@ import librosa
 
 app = Flask(__name__)
 
-beat_animation_running = False
-beat_animation_thread = None
-current_song_path = None
-beat_frames = None
-
+volume_animation_running = False
+volume_animation_thread = None
+current_audio_path = None
 
 # NeoPixel setup
 pixel_pin = board.D18
@@ -149,86 +147,51 @@ def upload_music():
         
         return jsonify({
             "success": True, 
-            "tempo": round(tempo, 2),
-            "beat_count": len(beat_frames),
-            "duration": round(librosa.get_duration(y=y, sr=sr), 2)
+            "tempo": float(tempo),  # Convert numpy.float64 to Python float
+            "beat_count": int(len(beat_frames)),  # Convert numpy.int64 to Python int
+            "duration": float(librosa.get_duration(y=y, sr=sr))  # Convert to Python float
         })
     except Exception as e:
         print(f"Error processing audio: {e}")  # Debug print
         return jsonify({"success": False, "message": str(e)})
 
-def beat_animation():
-    global animation_running, beat_animation_running, beat_frames, current_song_path
-    
-    if not current_song_path or beat_frames is None:
-        return
-    
-    y, sr = librosa.load(current_song_path)
-    
-    # Sort LEDs by height for vertical beat visualization
-    sorted_leds = sorted(led_positions, key=lambda x: x['z'], reverse=True)
-    
-    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-    
-    while beat_animation_running:
-        for beat_time in beat_times:
-            if not beat_animation_running:
-                break
-            
-            # Select a few LEDs to light up on beat
-            beat_leds = sorted_leds[:3]  # Top 3 LEDs
-            
-            for led in beat_leds:
-                led_id = led['id']
-                # Bright green for beats
-                pixels[led_id] = (0, 255, 0)
-            
-            pixels.show()
-            time.sleep(0.1)  # Brief flash
-            
-            # Turn off beat LEDs
-            for led in beat_leds:
-                led_id = led['id']
-                pixels[led_id] = (0, 0, 0)
-            
-            pixels.show()
-            
-            # Wait until next beat (or close to it)
-            time.sleep(max(0, beat_time - 0.1))
+def interpolate_color(color1, color2, factor):
+    """Create a smooth gradient between two colors"""
+    return tuple(int(color1[i] + (color2[i] - color1[i]) * factor) for i in range(3))
 
-@app.route('/start_beat_animation', methods=['POST'])
-def start_beat_animation():
-    global beat_animation_thread, beat_animation_running
+def get_gradient_color(position, volume):
+    """Get color from gradient based on height position"""
+    # Define base colors in GBR format (NeoPixel order)
+    GREEN = (255, 0, 0)      # Bottom
+    YELLOW = (255, 255, 0)   # Middle
+    RED = (0, 0, 255)        # Top
     
-    if not current_song_path or beat_frames is None:
-        return jsonify({"success": False, "message": "No music uploaded"})
+    # Create gradient
+    if position < 0.5:
+        # Gradient from green to yellow
+        color = interpolate_color(GREEN, YELLOW, position * 2)
+    else:
+        # Gradient from yellow to red
+        color = interpolate_color(YELLOW, RED, (position - 0.5) * 2)
     
-    if not beat_animation_running:
-        beat_animation_running = True
-        beat_animation_thread = threading.Thread(target=beat_animation)
-        beat_animation_thread.start()
-        return jsonify({"success": True, "message": "Beat animation started"})
-    
-    return jsonify({"success": False, "message": "Animation already running"})
+    # Apply volume-based brightness
+    brightness = 0.2 + (volume * 0.8)  # Minimum 20% brightness
+    return tuple(int(c * brightness) for c in color)
 
-@app.route('/stop_beat_animation', methods=['POST'])
-def stop_beat_animation():
-    global beat_animation_running
-    
-    if beat_animation_running:
-        beat_animation_running = False
-        # Wait for thread to finish
-        if beat_animation_thread:
-            beat_animation_thread.join()
-        
-        # Turn off all LEDs
-        pixels.fill((0, 0, 0))
-        pixels.show()
-        
-        return jsonify({"success": True, "message": "Beat animation stopped"})
-    
-    return jsonify({"success": False, "message": "No animation running"})
 
+def get_led_color(position, volume):
+    """Get color based on LED position with volume-based brightness"""
+    # Define colors in GBR format (NeoPixel order)
+    GREEN = (255, 0, 0)      # Bottom section
+    YELLOW = (255, 255, 0)   # Middle section
+    RED = (0, 0, 255)        # Top section
+    
+    if position < 0.33:
+        return tuple(int(c * volume) for c in GREEN)
+    elif position < 0.66:
+        return tuple(int(c * volume) for c in YELLOW)
+    else:
+        return tuple(int(c * volume) for c in RED)
 
 def rain_animation():
     global animation_running
@@ -286,6 +249,79 @@ def stop_rain():
         pixels.fill((0, 0, 0))
         pixels.show()
         return jsonify({"success": True, "message": "Rain animation stopped"})
+    return jsonify({"success": False, "message": "No animation running"})
+
+def get_rainbow_color(position):
+    """Get rainbow color based on position (0-1)"""
+    if position < 0.2:
+        return (0, 0, 255)  # Red (in GBR format)
+    elif position < 0.4:
+        return (127, 0, 255)  # Orange
+    elif position < 0.6:
+        return (255, 0, 255)  # Yellow
+    elif position < 0.8:
+        return (255, 0, 0)  # Green
+    else:
+        return (0, 255, 0)  # Blue
+
+def spiral_animation():
+    global animation_running
+    
+    # Sort LEDs by Y coordinate in descending order (highest to lowest)
+    sorted_leds = sorted(led_positions, key=lambda x: x['z'])
+    num_leds = len(sorted_leds)
+    
+    # Animation parameters
+    speed = 0.2  # Time between each LED turning on
+    
+    while animation_running:
+        # Turn off all LEDs
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        
+        # Turn on LEDs one by one from highest to lowest Y position
+        lit_leds = []
+        for i in range(num_leds):
+            if not animation_running:
+                break
+                
+            # Get LED position and calculate color
+            led = sorted_leds[i]
+            height_position = i / num_leds
+            color = get_rainbow_color(height_position)
+            
+            # Turn on this LED
+            pixels[led['id']] = color
+            lit_leds.append(led['id'])
+            pixels.show()
+            
+            # Wait before turning on next LED
+            time.sleep(speed)
+        
+        # Keep all LEDs on for a moment
+        if animation_running:
+            time.sleep(1.0)
+
+@app.route('/animation/start_spiral', methods=['POST'])
+def start_spiral():
+    global animation_thread, animation_running
+    if not animation_running:
+        animation_running = True
+        animation_thread = threading.Thread(target=spiral_animation)
+        animation_thread.start()
+        return jsonify({"success": True, "message": "Spiral animation started"})
+    return jsonify({"success": False, "message": "Animation already running"})
+
+@app.route('/animation/stop_spiral', methods=['POST'])
+def stop_spiral():
+    global animation_running
+    if animation_running:
+        animation_running = False
+        if animation_thread:
+            animation_thread.join()
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        return jsonify({"success": True, "message": "Spiral animation stopped"})
     return jsonify({"success": False, "message": "No animation running"})
 
 @app.route('/get_led_states', methods=['GET'])
