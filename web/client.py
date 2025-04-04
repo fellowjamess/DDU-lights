@@ -4,6 +4,7 @@ import json
 import board
 import neopixel
 from collections import defaultdict
+import aiohttp
 
 # LED strip configuration
 pixel_pin = board.D18
@@ -14,15 +15,54 @@ pixels = neopixel.NeoPixel(
 
 led_states = defaultdict(lambda: '#000000')  # Default color is black
 
+async def get_initial_states():
+    """Gets the initial LED states from server, if available."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get('http://95.179.138.135:80/api/getStates') as response:
+                if response.status == 200:
+                    states = await response.json()
+                    return states
+    except Exception as e:
+        print(f"Error getting initial states: {e}")
+    return {}
+
+async def apply_led_state(led_id, color):
+    """Applys the color to LED"""
+    try:
+        # Convert hex color to RGB
+        color = color.lstrip('#')
+        r = int(color[0:2], 16)
+        g = int(color[2:4], 16)
+        b = int(color[4:6], 16)
+        
+        # Update LED and store state
+        pixels[led_id] = (g, b, r)  # GBR order
+        pixels.show()
+        led_states[str(led_id)] = '#' + color
+    except Exception as e:
+        print(f"Error applying LED state: {e}")
+
 async def connect_to_server():
     uri = "ws://95.179.138.135:80/ws"
     
     while True:
         try:
+            # Get initial states from server before connecting websocket
+            initial_states = await get_initial_states()
+            
+            # Apply initial states
+            for led_id_str, color in initial_states.items():
+                try:
+                    led_id = int(led_id_str)
+                    await apply_led_state(led_id, color)
+                except ValueError:
+                    continue
+            
             async with websockets.connect(uri) as websocket:
                 print("Connected to server")
                 
-                # Send current LED states when connecting
+                # Send current LED states to confirm
                 states_message = {
                     "type": "states",
                     "states": led_states
@@ -44,33 +84,15 @@ async def connect_to_server():
                                 print(f"LED ID out of range: {led_id}")
                                 continue
                             
-                            # Convert hex color to RGB
-                            color = command.get('color', '#000000').lstrip('#')
-                            try:
-                                r = int(color[0:2], 16)
-                                g = int(color[2:4], 16)
-                                b = int(color[4:6], 16)
-                                
-                                # Update LED and store state
-                                pixels[led_id] = (g, b, r)  # GBR order
-                                pixels.show()
-                                led_states[str(led_id)] = '#' + color
-                                
-                                # Send confirmation
-                                await websocket.send(json.dumps({
-                                    "type": "status",
-                                    "led": led_id,
-                                    "color": '#' + color,
-                                    "success": True
-                                }))
-                            except (ValueError, IndexError) as e:
-                                print(f"Error processing color: {e}")
-                                
-                        elif command['type'] == 'get_states':
-                            # Send current LED states
+                            color = command.get('color', '#000000')
+                            await apply_led_state(led_id, color)
+                            
+                            # Send confirmation
                             await websocket.send(json.dumps({
-                                "type": "states",
-                                "states": led_states
+                                "type": "status",
+                                "led": led_id,
+                                "color": color,
+                                "success": True
                             }))
                                 
                     except json.JSONDecodeError as e:
