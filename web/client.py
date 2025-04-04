@@ -54,6 +54,7 @@ async def connect_to_server():
                 # Get and apply initial states
                 initial_states = await get_initial_states(websocket)
                 for led_id_str, color in initial_states.items():
+                    print(f"Applying initial state for LED {led_id_str}: {color}")
                     try:
                         led_id = int(led_id_str)
                         await apply_led_state(led_id, color)
