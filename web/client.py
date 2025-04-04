@@ -3,7 +3,7 @@ import websockets
 import json
 import board
 import neopixel
-import aiohttp
+import requests
 from collections import defaultdict
 
 # LED strip configuration
@@ -15,18 +15,17 @@ pixels = neopixel.NeoPixel(
 
 led_states = defaultdict(lambda: '#000000')  # Default color is black
 
-async def get_initial_states():
+def get_initial_states():
     """Gets the initial LED states from server via HTTP request"""
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get('http://95.179.138.135:80/api/getStates') as response:
-                if response.status == 200:
-                    states = await response.json()
-                    print("Got initial states:", states)
-                    return states
-                else:
-                    print(f"Error getting states: {response.status}")
-                    return {}
+        response = requests.get('http://95.179.138.135:80/api/getStates')
+        if response.status_code == 200:
+            states = response.json()
+            print("Got initial states:", states)
+            return states
+        else:
+            print(f"Error getting states: {response.status_code}")
+            return {}
     except Exception as e:
         print(f"Error getting initial states: {e}")
         return {}
@@ -52,19 +51,19 @@ async def connect_to_server():
     
     while True:
         try:
+            # Get and apply initial states before websocket connection
+            initial_states = get_initial_states()
+            for led_id_str, color in initial_states.items():
+                print(f"Applying initial state for LED {led_id_str}: {color}")
+                try:
+                    led_id = int(led_id_str)
+                    await apply_led_state(led_id, color)
+                except ValueError:
+                    continue
+
             async with websockets.connect(uri) as websocket:
                 print("Connected to server")
                 
-                # Get and apply initial states
-                initial_states = await get_initial_states()
-                for led_id_str, color in initial_states.items():
-                    print(f"Applying initial state for LED {led_id_str}: {color}")
-                    try:
-                        led_id = int(led_id_str)
-                        await apply_led_state(led_id, color)
-                    except ValueError:
-                        continue
-
                 # Send current LED states to confirm
                 states_message = {
                     "type": "states",
