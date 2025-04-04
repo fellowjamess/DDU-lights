@@ -129,6 +129,8 @@ def main():
         # Wait for the user to press enter and blink LEDs red to indicate rotation
         print("\nPlease rotate camera 90 degrees")
         while True:
+            if input("Press Enter when camera is rotated"):
+                break
             # Visual feedback for rotation
             # Turn LEDs red
             pixels.fill((0, 0, 255))
@@ -138,11 +140,7 @@ def main():
             pixels.fill((0, 0, 0))
             pixels.show()
             time.sleep(0.5)
-            # Check for input
-            if input("Press Enter when camera is rotated"): 
-                break
-        pixels.fill((0, 0, 0))
-        pixels.show()
+
         # Second capture (beta plan - 90 degrees)
         print("Capturing beta plan (90 degrees)")
         beta_positions = capture_plan(camera, "beta")
