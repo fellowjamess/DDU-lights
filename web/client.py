@@ -6,13 +6,13 @@ import neopixel
 
 # LED strip configuration
 pixel_pin = board.D18
-num_pixels = 40 # We have 40 LEDs in total
+num_pixels = 40 # We have 40 LEDs
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False
 )
 
 async def connect_to_server():
-    uri = "ws://95.179.138.135:80/ws" # IP address and port of the server
+    uri = "ws://95.179.138.135:80/ws"
     
     while True:
         try:
@@ -20,26 +20,49 @@ async def connect_to_server():
                 print("Connected to server")
                 
                 while True:
-                    msg = await websocket.recv()
-                    command = json.loads(msg)
-                    
-                    if command['type'] == 'update':
-                        # Convert hex color to RGB
-                        color = command['color'].lstrip('#')
-                        r = int(color[0:2], 16)
-                        g = int(color[2:4], 16)
-                        b = int(color[4:6], 16)
+                    try:
+                        msg = await websocket.recv()
+                        command = json.loads(msg)
                         
-                        # Update LED
-                        pixels[command['led']] = (g, b, r)  # GBR order
-                        pixels.show()
-                        
-                        # Send back confirmation
-                        await websocket.send(json.dumps({
-                            "type": "status",
-                            "led": command['led'],
-                            "color": command['color']
-                        }))
+                        if command['type'] == 'update':
+                            led_id = command.get('led')
+                            if led_id is None or not isinstance(led_id, int):
+                                print(f"Invalid LED ID: {led_id}")
+                                continue
+                                
+                            if led_id < 0 or led_id >= num_pixels:
+                                print(f"LED ID out of range: {led_id}")
+                                continue
+                            
+                            # Convert hex color to RGB
+                            color = command.get('color', '#000000').lstrip('#')
+                            try:
+                                r = int(color[0:2], 16)
+                                g = int(color[2:4], 16)
+                                b = int(color[4:6], 16)
+                                
+                                # Update LED
+                                pixels[led_id] = (g, b, r)  # GBR order
+                                pixels.show()
+                                
+                                # Send confirmation
+                                await websocket.send(json.dumps({
+                                    "type": "status",
+                                    "led": led_id,
+                                    "color": command['color'],
+                                    "success": True
+                                }))
+                            except (ValueError, IndexError) as e:
+                                print(f"Error processing color: {e}")
+                                await websocket.send(json.dumps({
+                                    "type": "error",
+                                    "message": f"Invalid color format: {color}",
+                                    "success": False
+                                }))
+                                
+                    except json.JSONDecodeError as e:
+                        print(f"Invalid JSON received: {e}")
+                        continue
                         
         except websockets.ConnectionClosed:
             print("Connection lost, reconnecting...")
@@ -49,4 +72,14 @@ async def connect_to_server():
             await asyncio.sleep(5)
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(connect_to_server())
+    try:
+        # Clear all LEDs on startup
+        pixels.fill((0, 0, 0))
+        pixels.show()
+        
+        # Start the websocket client
+        asyncio.get_event_loop().run_until_complete(connect_to_server())
+    except KeyboardInterrupt:
+        # Clear LEDs on exit
+        pixels.fill((0, 0, 0))
+        pixels.show()

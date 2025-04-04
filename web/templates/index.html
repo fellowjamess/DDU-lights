@@ -17,7 +17,6 @@
             overflow-y: auto;
         }
         
-        /* Update renderer size in JavaScript */
         .led-control {
             border: 1px solid #ddd;
             padding: 10px;
@@ -29,7 +28,7 @@
     <div class="led-grid" id="ledControls"></div>
 
     <script>
-        const numLEDs = 20;
+        const numLEDs = 40;
         const ledGrid = document.getElementById('ledControls');
 
         // Create LED controls
@@ -46,6 +45,8 @@
 
         function updateLED(id) {
             const color = document.getElementById(`color-${id}`).value;
+            console.log(`Updating LED ${id} to color ${color}`);
+            
             fetch('/api/lights', {
                 method: 'POST',
                 headers: {
@@ -56,7 +57,14 @@
                     led: id,
                     color: color
                 })
-            });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Error updating LED:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
     </script>
 </body>

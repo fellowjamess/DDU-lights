@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,8 +20,15 @@ var (
 
 type LightCommand struct {
 	Type  string `json:"type"`
-	LED   int    `json:"led,omitempty"`
-	Color string `json:"color,omitempty"`
+	LED   int    `json:"led"`
+	Color string `json:"color"`
+}
+
+type StatusMessage struct {
+	Type    string `json:"type"`
+	LED     int    `json:"led"`
+	Color   string `json:"color"`
+	Success bool   `json:"success"`
 }
 
 func main() {
@@ -35,6 +43,7 @@ func main() {
 	r.GET("/ws", handleWebSocket)
 	r.POST("/api/lights", handleLightUpdate)
 
+	log.Println("Server starting on port 80...")
 	r.Run(":80")
 }
 
@@ -45,7 +54,7 @@ func handleHome(c *gin.Context) {
 func handleWebSocket(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("WebSocket upgrade error: %v\n", err)
 		return
 	}
 	defer conn.Close()
@@ -53,14 +62,17 @@ func handleWebSocket(c *gin.Context) {
 	clients[conn] = true
 	defer delete(clients, conn)
 
+	log.Printf("New client connected. Total clients: %d\n", len(clients))
+
 	// Handle incoming messages from Pi
 	for {
-		var msg LightCommand
+		var msg StatusMessage
 		err := conn.ReadJSON(&msg)
 		if err != nil {
+			log.Printf("Error reading message: %v\n", err)
 			break
 		}
-		// Handle status updates from Pi
+		log.Printf("Received status from client: %+v\n", msg)
 	}
 }
 
@@ -71,12 +83,20 @@ func handleLightUpdate(c *gin.Context) {
 		return
 	}
 
+	// Validate LED index
+	if cmd.LED < 0 || cmd.LED >= 20 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid LED index"})
+		return
+	}
+
 	// Broadcast command to all connected Pis
 	for client := range clients {
 		err := client.WriteJSON(cmd)
 		if err != nil {
+			log.Printf("Error sending to client: %v\n", err)
 			delete(clients, client)
 			client.Close()
+			continue
 		}
 	}
 
