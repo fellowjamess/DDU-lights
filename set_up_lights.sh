@@ -14,4 +14,4 @@ kill $PIDsecond
 
 # Change directory and run web server
 cd web
-sudo python main.py
+sudo python client.py

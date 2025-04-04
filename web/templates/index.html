@@ -9,14 +9,6 @@
             gap: 10px;
             margin: 20px;
         }
-        #music-container {
-            flex: 1;
-            width: 33.33%;
-            padding: 20px;
-            background: linear-gradient(145deg, #2c3e50, #3498db);
-            overflow-y: auto;
-        }
-        
         .led-control {
             border: 1px solid #ddd;
             padding: 10px;
@@ -43,6 +35,22 @@
             ledGrid.appendChild(div);
         }
 
+        // Loads the LED states from the server
+        // and sets the color inputs accordingly
+        function loadLEDStates() {
+            fetch('/api/states')
+                .then(response => response.json())
+                .then(states => {
+                    for (const [led, color] of Object.entries(states)) {
+                        const colorInput = document.getElementById(`color-${led}`);
+                        if (colorInput) {
+                            colorInput.value = color;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading LED states:', error));
+        }
+
         function updateLED(id) {
             const color = document.getElementById(`color-${id}`).value;
             console.log(`Updating LED ${id} to color ${color}`);
@@ -66,6 +74,9 @@
             })
             .catch(error => console.error('Error:', error));
         }
+
+        // Load LED states when page loads
+        document.addEventListener('DOMContentLoaded', loadLEDStates);
     </script>
 </body>
 </html>
