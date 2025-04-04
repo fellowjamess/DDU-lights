@@ -2,6 +2,8 @@ from picamera2 import Picamera2
 import cv2
 import numpy as np
 import time
+import sys
+import select
 import board
 import neopixel
 import os
@@ -128,18 +130,20 @@ def main():
 
         # Wait for the user to press enter and blink LEDs red to indicate rotation
         print("\nPlease rotate camera 90 degrees")
+        print("Press Enter when camera is rotated")
         while True:
-            response = input("Press Enter when camera is rotated")
-            if response == "":  # Check for empty string (Enter was pressed)
+            # Check if there's input available
+            if select.select([sys.stdin], [], [], 0.2)[0]:
+                input()
                 break
 
-            # Visual feedback for rotation
-            pixels.fill((0, 0, 255))  # Red in GBR format
+            # Blink LED while waiting
+            pixels.fill((0, 0, 255))
             pixels.show()
-            time.sleep(0.5)
-            pixels.fill((0, 0, 0)) 
+            time.sleep(0.25)
+            pixels.fill((0, 0, 0))
             pixels.show()
-            time.sleep(0.5)
+            time.sleep(0.25)
 
         pixels.fill((0, 0, 0))
         pixels.show()
