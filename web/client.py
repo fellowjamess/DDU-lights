@@ -3,6 +3,7 @@ import websockets
 import json
 import board
 import neopixel
+import aiohttp
 from collections import defaultdict
 
 # LED strip configuration
@@ -14,18 +15,21 @@ pixels = neopixel.NeoPixel(
 
 led_states = defaultdict(lambda: '#000000')  # Default color is black
 
-async def get_initial_states(websocket):
-    """Gets the initial LED states from server via websocket"""
+async def get_initial_states():
+    """Gets the initial LED states from server via HTTP request"""
     try:
-        # Request states
-        await websocket.send(json.dumps({"type": "get_states"}))
-        response = await websocket.recv()
-        states = json.loads(response)
-        if states.get("type") == "states":
-            return states.get("states", {})
+        async with aiohttp.ClientSession() as session:
+            async with session.get('http://95.179.138.135:80/api/getStates') as response:
+                if response.status == 200:
+                    states = await response.json()
+                    print("Got initial states:", states)
+                    return states
+                else:
+                    print(f"Error getting states: {response.status}")
+                    return {}
     except Exception as e:
         print(f"Error getting initial states: {e}")
-    return {}
+        return {}
 
 async def apply_led_state(led_id, color):
     """Applys the color to LED"""
@@ -52,7 +56,7 @@ async def connect_to_server():
                 print("Connected to server")
                 
                 # Get and apply initial states
-                initial_states = await get_initial_states(websocket)
+                initial_states = await get_initial_states()
                 for led_id_str, color in initial_states.items():
                     print(f"Applying initial state for LED {led_id_str}: {color}")
                     try:
