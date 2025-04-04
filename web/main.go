@@ -31,6 +31,12 @@ type StatusMessage struct {
 	Success bool   `json:"success"`
 }
 
+// Add new type for LED states
+type LEDStates struct {
+	Type   string            `json:"type"`
+	States map[string]string `json:"states"`
+}
+
 func main() {
 	r := gin.Default()
 
@@ -51,6 +57,7 @@ func handleHome(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }
 
+// Update handleWebSocket function:
 func handleWebSocket(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -62,17 +69,37 @@ func handleWebSocket(c *gin.Context) {
 	clients[conn] = true
 	defer delete(clients, conn)
 
-	log.Printf("New client connected. Total clients: %d\n", len(clients))
+	log.Printf("New client connected. Total clients: %d\n", len(clients)) // Total clients should be 1
 
-	// Handle incoming messages from Pi
+	// Handle incoming messages from Pi, which are LED states
 	for {
-		var msg StatusMessage
+		var msg struct {
+			Type   string            `json:"type"`
+			States map[string]string `json:"states,omitempty"`
+			LED    int               `json:"led,omitempty"`
+			Color  string            `json:"color,omitempty"`
+		}
 		err := conn.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("Error reading message: %v\n", err)
 			break
 		}
-		log.Printf("Received status from client: %+v\n", msg)
+
+		switch msg.Type {
+		case "states":
+			// Broadcast LED states to all web clients
+			log.Printf("Received LED states: %+v\n", msg.States)
+			for client := range clients {
+				if client != conn { // Don't send back to sender
+					err := client.WriteJSON(msg)
+					if err != nil {
+						log.Printf("Error sending states to client: %v\n", err)
+					}
+				}
+			}
+		case "status":
+			log.Printf("Received status from client: LED %d = %s\n", msg.LED, msg.Color)
+		}
 	}
 }
 

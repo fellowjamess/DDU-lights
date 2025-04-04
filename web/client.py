@@ -11,6 +11,8 @@ pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=0.5, auto_write=False
 )
 
+led_states = {}  # Store current LED states
+
 async def connect_to_server():
     uri = "ws://95.179.138.135:80/ws"
     
@@ -18,6 +20,13 @@ async def connect_to_server():
         try:
             async with websockets.connect(uri) as websocket:
                 print("Connected to server")
+                
+                # Send initial LED states upon connection
+                states_message = {
+                    "type": "states",
+                    "states": led_states
+                }
+                await websocket.send(json.dumps(states_message))
                 
                 while True:
                     try:
@@ -41,9 +50,10 @@ async def connect_to_server():
                                 g = int(color[2:4], 16)
                                 b = int(color[4:6], 16)
                                 
-                                # Update LED
+                                # Update LED and store state
                                 pixels[led_id] = (g, b, r)  # GBR order
                                 pixels.show()
+                                led_states[str(led_id)] = command['color']
                                 
                                 # Send confirmation
                                 await websocket.send(json.dumps({
@@ -59,6 +69,13 @@ async def connect_to_server():
                                     "message": f"Invalid color format: {color}",
                                     "success": False
                                 }))
+                        
+                        elif command['type'] == 'get_states':
+                            # Respond with current LED states
+                            await websocket.send(json.dumps({
+                                "type": "states",
+                                "states": led_states
+                            }))
                                 
                     except json.JSONDecodeError as e:
                         print(f"Invalid JSON received: {e}")
