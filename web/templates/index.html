@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LED Control Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden;
+        }
+        #container { 
+            display: flex;
+            height: 100vh;
+        }
+        #three-container { 
+            flex: 1;
+            position: relative;
+        }
+        #controls {
+            flex: 1;
+            padding: 20px;
+            background: #f0f0f0;
+            overflow-y: auto;
+        }
+        .led-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px;
+        }
+        .led-control {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            background: white;
+        }
+        .all-leds-control {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+        .animation-control {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e0e0e0;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .led-control.missing {
+            position: relative;
+        }
+        .led-control.missing::after {
+            content: "•";
+            color: red;
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="three-container"></div>
+        <div id="controls">
+            <h2>LED Controls</h2>
+            
+            <div class="all-leds-control">
+                <h3>All LEDs</h3>
+                <div class="control-row">
+                    <input type="color" id="all-color" value="#000000" oninput="updateAll()">
+                </div>
+            </div>
+
+            <div class="animation-control">
+                <h3>Animations</h3>
+                <div class="control-row">
+                    <button onclick="startAnimation('rain')" id="rainStart">Start Rain</button>
+                    <button onclick="stopAnimation('rain')" id="rainStop">Stop Rain</button>
+                    <button onclick="startAnimation('spiral')" id="spiralStart">Start Spiral</button>
+                    <button onclick="stopAnimation('spiral')" id="spiralStop">Stop Spiral</button>
+                </div>
+            </div>
+
+            <div class="led-grid" id="ledControls"></div>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, lights = [];
+        let controls;
+        let pollInterval = null;
+
+        // Make Three.js scene
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0); // White background
+
+            const containerWidth = window.innerWidth / 2;
+            const containerHeight = window.innerHeight;
+
+            camera = new THREE.PerspectiveCamera(75, containerWidth / containerHeight, 0.1, 1000);
+            camera.position.set(5, 5, 5);
+            camera.lookAt(0, 0, 0);
+
+            // Antialias should create smoother edges
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(containerWidth, containerHeight);
+            document.getElementById('three-container').appendChild(renderer.domElement);
+
+            // YOU CAN MOVE AROUND!!!
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            // How smotth the camera movement smoother is
+            controls.dampingFactor = 0.05;
+
+            //const ambientLight = new THREE.AmbientLight(0x404040);
+            //const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            //directionalLight.position.set(5, 5, 5);
+            //scene.add(ambientLight);
+            //scene.add(directionalLight);
+
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+
+            const gridHelper = new THREE.GridHelper(10, 10);
+            scene.add(gridHelper);
+
+            createLEDControls();
+            animate();
+            loadLEDStates();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function createLEDControls() {
+            const numLEDs = 40;
+            const ledGrid = document.getElementById('ledControls');
+            let ledPositions = {};
+            
+            // WebSocket connection for real-time updates
+            const ws = new WebSocket('ws://95.179.138.135/ws');
+            
+            ws.onmessage = function(event) {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'positions') {
+                    ledPositions = msg.positions;
+                    updateLEDVisuals();
+                }
+            };
+
+            function updateLEDVisuals() {
+                for (let i = 0; i < numLEDs; i++) {
+                    const div = document.getElementById(`led-control-${i}`);
+                    if (div) {
+                        if (!ledPositions[i]) {
+                            div.classList.add('missing');
+                        } else {
+                            div.classList.remove('missing');
+                            if (lights[i]) {
+                                const pos = ledPositions[i];
+                                lights[i].position.set(pos.x, pos.y, pos.z);
+                            }
+                        }
+                    }
+                }
+            }
+
+    
+            for (let i = 0; i < numLEDs; i++) {
+                const geometry = new THREE.SphereGeometry(0.1, 16, 16);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: 0x000000,
+                    emissive: 0x000000
+                });
+                const light = new THREE.Mesh(geometry, material);
+                
+                /*
+                // Use spiral position
+                light.position.set(
+                    Math.cos(i/numLEDs * Math.PI * 2) * 2,
+                    i/numLEDs * 4 - 2,
+                    Math.sin(i/numLEDs * Math.PI * 2) * 2
+                );
+                */
+
+                scene.add(light);
+                lights[i] = light;
+                
+                // Control UI
+                const div = document.createElement('div');
+                div.className = 'led-control';
+                div.id = `led-control-${i}`;
+                div.innerHTML = `
+                    <h3>LED ${i}</h3>
+                    <input type="color" id="color-${i}" value="#000000" oninput="updateLED(${i})">
+                `;
+                ledGrid.appendChild(div);
+            }
+        }
+
+        function loadLEDStates() {
+            fetch('/api/getStates')
+                .then(response => response.json())
+                .then(states => {
+                    for (const [led, color] of Object.entries(states)) {
+                        const colorInput = document.getElementById(`color-${led}`);
+                        if (colorInput) {
+                            colorInput.value = color;
+                            updateLEDVisual(parseInt(led), color);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading LED states:', error));
+        }
+
+        function updateLEDVisual(id, color) {
+            const rgbColor = new THREE.Color(color);
+            if (lights[id]) {
+                lights[id].material.color.set(rgbColor);
+                lights[id].material.emissive.set(rgbColor);
+                lights[id].material.needsUpdate = true;
+            }
+        }
+
+        function updateLED(id) {
+            const color = document.getElementById(`color-${id}`).value;
+            const rgbColor = new THREE.Color(color);
+
+            fetch('/api/updateLights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'update',
+                    led: id,
+                    color: color
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateLEDVisual(id, color);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function updateAll() {
+            const color = document.getElementById('all-color').value;
+            
+            fetch('/api/updateLights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'updateAll',
+                    color: color
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 3D visualization
+                    lights.forEach((light, index) => {
+                        updateLEDVisual(index, color);
+                        
+                        // Individual LED color inputs
+                        const colorInput = document.getElementById(`color-${index}`);
+                        if (colorInput) {
+                            colorInput.value = color;
+                        }
+                    });
+                }
+            });
+        }
+
+        function startAnimation(type) {
+            // Disable start button and enable stop button for current animation
+            document.getElementById(`${type}Start`).disabled = true;
+            document.getElementById(`${type}Stop`).disabled = false;
+    
+            // Disable both buttons for other animation
+            const otherType = type === 'rain' ? 'spiral' : 'rain';
+            document.getElementById(`${otherType}Start`).disabled = true;
+            document.getElementById(`${otherType}Stop`).disabled = true;
+            
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+            
+            fetch('/api/updateLights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'animation',
+                    action: 'start',
+                    name: type
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    pollInterval = setInterval(loadLEDStates, 100);
+                }
+            })
+            .catch(error => {
+                console.error('Error starting animation:', error);
+                document.getElementById(`${type}Start`).disabled = false;
+                document.getElementById(`${type}Stop`).disabled = true;
+            });
+        }
+
+        function stopAnimation(type) {
+            // Enable start button and disable stop button
+            document.getElementById(`${type}Start`).disabled = false;
+            document.getElementById(`${type}Stop`).disabled = true;
+
+            fetch('/api/updateLights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'animation',
+                    action: 'stop',
+                    name: type
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (pollInterval) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                    }
+                    loadLEDStates();
+                }
+            })
+            .catch(error => {
+                console.error('Error stopping animation:', error);
+                document.getElementById(`${type}Start`).disabled = true;
+                document.getElementById(`${type}Stop`).disabled = false;
+            });
+        }
+
+        // Window resize for the 3D canvas/view
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth / 2;
+            const height = window.innerHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        init();
+    </script>
+</body>
+</html>
