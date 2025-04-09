@@ -2,6 +2,7 @@ import time
 import random
 import threading
 
+# State machiness
 animation_state = {
     "is_running": False,
     "current_name": None,
@@ -103,6 +104,110 @@ def run_spiral_effect(pixels, led_positions, state):
 
         if state["is_running"]:
             time.sleep(1.0)
+
+# Lightning effect
+# White flashing
+def run_lightning_effect(pixels, led_positions, state):
+    sorted_leds = sorted(led_positions, key=lambda x: x['y'], reverse=True)
+    
+    while state["is_running"]:
+        flashes = random.randint(1, 3)
+        for _ in range(flashes):
+            for led in sorted_leds:
+                pixels[led['id']] = (255, 255, 255) # White
+            pixels.show()
+            
+            time.sleep(0.1)
+            
+            # Turn all LEDs off
+            for led in sorted_leds:
+                pixels[led['id']] = (0, 0, 0)
+            pixels.show()
+            
+            time.sleep(0.1)
+        
+        time.sleep(random.uniform(2.0, 5.0))
+
+# Gentle snow effect
+# White falling
+def run_snow_effect(pixels, led_positions, state):
+    sorted_leds = sorted(led_positions, key=lambda x: x['y'], reverse=True)
+    
+    while state["is_running"]:
+        num_snowflakes = random.randint(1, 5)
+        lit_leds = []
+        
+        for _ in range(num_snowflakes):
+            if len(sorted_leds) > 0:
+                led = random.choice(sorted_leds)
+                pixels[led['id']] = (200, 200, 200) # Soft white
+                lit_leds.append(led['id'])
+                pixels.show()
+                
+        time.sleep(0.3)
+        
+        # Turn off snowflakes
+        for led_id in lit_leds:
+            pixels[led_id] = (0, 0, 0)
+        pixels.show()
+        
+        time.sleep(0.2)
+
+# Gentle sun effect
+# Yellow and orange
+def run_sun_effect(pixels, led_positions, state):
+    sorted_leds = sorted(led_positions, key=lambda x: -x['y'])
+    base_color = (200, 100, 0) # Orange/yellow in GBR format
+    
+    while state["is_running"]:
+        for brightness in range(0, 100, 2):
+            if not state["is_running"]:
+                break
+                
+            factor = brightness / 100.0
+            color = tuple(int(c * factor) for c in base_color)
+            
+            for led in sorted_leds:
+                pixels[led['id']] = color
+            pixels.show()
+            time.sleep(0.02)
+            
+        for brightness in range(100, 0, -2):
+            if not state["is_running"]:
+                break
+                
+            factor = brightness / 100.0
+            color = tuple(int(c * factor) for c in base_color)
+            
+            for led in sorted_leds:
+                pixels[led['id']] = color
+            pixels.show()
+
+# Starts the weather animation based on weather type
+def start_weather_animation(pixels, led_positions, state, weather_type):
+    if state["is_running"]:
+        return False
+        
+    state["is_running"] = True
+    state["current_name"] = weather_type
+    
+    if weather_type == "Rain":
+        target = run_rain_effect
+    elif weather_type == "Thunderstorm":
+        target = run_lightning_effect
+    elif weather_type == "Snow":
+        target = run_snow_effect
+    elif weather_type == "Clear":
+        target = run_sun_effect
+    else:
+        return False
+
+    state["thread"] = threading.Thread(
+        target=target,
+        args=(pixels, led_positions, state)
+    )
+    state["thread"].start()
+    return True
 
 # Starts the rain animation
 def start_rain(pixels, led_positions, state):

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -51,6 +52,18 @@ type StatusMessage struct {
 type LEDStates struct {
 	Type   string            `json:"type"`
 	States map[string]string `json:"states"`
+}
+
+type WeatherData struct {
+	Weather []struct {
+		Main string `json:"main"`
+	} `json:"weather"`
+}
+
+type WeatherCommand struct {
+	Type   string `json:"type"`
+	Action string `json:"action"`
+	City   string `json:"city"`
 }
 
 func handleHome(c *gin.Context) {
@@ -140,6 +153,86 @@ func handleWebSocket(c *gin.Context) {
 	}
 }
 
+func handleWeather(c *gin.Context) {
+	apiKey := "e8f8d74839fc73d650f76ea090efec08"
+	if apiKey == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Weather API key not found"})
+		return
+	}
+
+	var cmd WeatherCommand
+	if err := c.BindJSON(&cmd); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Weather data from OpenWeather API
+	url := fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", cmd.City, apiKey)
+	resp, err := http.Get(url)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch weather data"})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read weather data"})
+		return
+	}
+
+	var weatherData WeatherData
+	if err := json.Unmarshal(body, &weatherData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal weather data"})
+		return
+	}
+
+	if len(weatherData.Weather) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No weather data available"})
+		return
+	}
+
+	// Weather conditions to animation command
+	weatherType := weatherData.Weather[0].Main
+	animationType := ""
+
+	switch weatherType {
+	case "Rain", "Drizzle":
+		animationType = "rain"
+	case "Snow":
+		animationType = "snow"
+	case "Thunderstorm":
+		animationType = "lightning"
+	case "Clear":
+		animationType = "clear"
+	default:
+		animationType = "clear"
+	}
+
+	// Send animation command to all clients
+	command := LightCommand{
+		Type:   "animation",
+		Action: "start",
+		Name:   animationType,
+	}
+
+	for client := range clients {
+		err := client.WriteJSON(command)
+		if err != nil {
+			log.Printf("Error sending to client: %v\n", err)
+			delete(clients, client)
+			client.Close()
+			continue
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"weather":   weatherType,
+		"animation": animationType,
+	})
+}
+
 func handleLightUpdate(c *gin.Context) {
 	var cmd LightCommand
 	if err := c.BindJSON(&cmd); err != nil {
@@ -223,6 +316,7 @@ func main() {
 	r.GET("/ws", handleWebSocket)
 	r.POST("/api/updateLights", handleLightUpdate)
 	r.GET("/api/getStates", handleGetStates)
+	r.POST("/api/weather", handleWeather)
 
 	log.Println("Server starting on port 80...")
 	r.Run(":80")

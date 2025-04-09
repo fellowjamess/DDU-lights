@@ -1,106 +1,226 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LED Control Dashboard</title>
+    <meta charset="UTF-8">
+    <title>LED kontrol - IOT</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+			font-family: Roboto, sans-serif; /* For you Robotto ;) */
+        }
+
         body { 
             margin: 0; 
             overflow: hidden;
+            background-color: #f8f9fa;
         }
+
         #container { 
             display: flex;
             height: 100vh;
         }
+
         #three-container { 
             flex: 1;
             position: relative;
         }
+
         #controls {
             flex: 1;
             padding: 20px;
             background: #f0f0f0;
             overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
         }
+       
+        h2, h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
         .led-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
         }
+        
         .led-control {
             border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 15px;
             background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
         }
-        .all-leds-control {
-            width: 100%;
-            margin-bottom: 20px;
+        
+        .control-section {
+            background-color: white;
             padding: 15px;
-            background-color: #e0e0e0;
-            border-radius: 5px;
-        }
-        .animation-control {
-            width: 100%;
             margin-bottom: 20px;
-            padding: 15px;
-            background-color: #e0e0e0;
-            border-radius: 5px;
         }
-        button {
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            padding: 5px 10px;
+        
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        input[type="color"] {
+            width: 100px;
+            height: 50px;
+            border: none;
             cursor: pointer;
         }
-        button:hover {
-            background-color: #e0e0e0;
+        
+        button {
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
         }
+        
+        button:hover {
+            background-color: #2a66c8;
+        }
+        
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+        
+        .animation-button {
+            flex: 1;
+            min-width: 120px;
+            margin: 5px;
+            text-align: center;
+        }
+
+        #rainStart, #spiralStart, #weatherStart {
+            background-color: #4caf50;
+        }
+
+        #rainStop, #spiralStop, #weatherStop {
+            background-color: #f44336;
+        }
+
         .led-control.missing {
             position: relative;
+            border: 1px solid #ffcccc;
+            background-color: #fff6f6;
         }
+
         .led-control.missing::after {
-            content: "•";
+            content: "*";
             color: red;
+            font-size: 24px;
             position: absolute;
             right: 10px;
-            top: 10px;
+            top: 5px;
+        }
+
+        .led-label {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .info-tip {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .animation-controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .animation-box {
+            background-color: #f9f9f9;
+            padding: 15px;
+        }
+
+        .animation-title {
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
         }
     </style>
+
 </head>
 <body>
     <div id="container">
-        <div id="three-container"></div>
+        <div id="three-container">
+            <div class="info-tip">Træk for at rotere og scroll for at zoome</div>
+        </div>
         <div id="controls">
-            <h2>LED Controls</h2>
-            
-            <div class="all-leds-control">
-                <h3>All LEDs</h3>
+            <h2>LED kontrol</h2>
+
+            <div class="control-section">
+                <h3>Alle LED'er</h3>
                 <div class="control-row">
                     <input type="color" id="all-color" value="#000000" oninput="updateAll()">
+                    <span>Vælg farve til alle LED'er</span>
                 </div>
             </div>
 
-            <div class="animation-control">
-                <h3>Animations</h3>
-                <div class="control-row">
-                    <button onclick="startAnimation('rain')" id="rainStart">Start Rain</button>
-                    <button onclick="stopAnimation('rain')" id="rainStop">Stop Rain</button>
-                    <button onclick="startAnimation('spiral')" id="spiralStart">Start Spiral</button>
-                    <button onclick="stopAnimation('spiral')" id="spiralStop">Stop Spiral</button>
+            <div class="control-section">
+                <h3>Animationer</h3>
+                <div class="animation-controls-grid">
+                    <div class="animation-box">
+                        <div class="animation-title">
+                            <span>Regn</span>
+                        </div>
+                        <div class="control-row">
+                            <button onclick="startAnimation('rain')" id="rainStart" class="animation-button">Start regn</button>
+							<button onclick="stopAnimation('rain')" id="rainStop" class="animation-button" disabled>Stop regn</button>
+                        </div>
+                    </div>
+                    <div class="animation-box">
+                        <div class="animation-title">
+                            <span>Spiral</span>
+                        </div>
+                        <div class="control-row">
+                            <button onclick="startAnimation('spiral')" id="spiralStart" class="animation-button">Start spiral</button>
+							<button onclick="stopAnimation('spiral')" id="spiralStop" class="animation-button" disabled>Stop spiral</button>
+                        </div>
+                    </div>
+                    <div class="animation-box">
+                        <div class="animation-title">
+                            <span>Vejr</span>
+                        </div>
+                        <div class="control-row">
+                            <input type="text" id="cityInput" placeholder="Skriv navnet på byen">
+                            <button onclick="startWeather()" id="weatherStart" class="animation-button">Start vejr</button>
+                            <button onclick="stopAnimation('weather')" id="weatherStop" class="animation-button" disabled>Stop vejr</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="led-grid" id="ledControls"></div>
+            <div class="control-section">
+                <h3>Individuelle LED'er</h3>
+                <div class="led-grid" id="ledControls"></div>
+            </div>
         </div>
     </div>
+
 
     <script>
         let scene, camera, renderer, lights = [];
@@ -294,15 +414,15 @@
         }
 
         function startAnimation(type) {
-            // Disable start button and enable stop button for current animation
-            document.getElementById(`${type}Start`).disabled = true;
-            document.getElementById(`${type}Stop`).disabled = false;
-    
-            // Disable both buttons for other animation
-            const otherType = type === 'rain' ? 'spiral' : 'rain';
-            document.getElementById(`${otherType}Start`).disabled = true;
-            document.getElementById(`${otherType}Stop`).disabled = true;
-            
+			// Disable start button and enable stop button for current animation
+			document.getElementById(`${type}Start`).disabled = true;
+			document.getElementById(`${type}Stop`).disabled = false;
+
+			// Disable both buttons for other animation
+			const otherType = type === 'rain' ? 'spiral' : 'rain';
+			document.getElementById(`${otherType}Start`).disabled = true;
+			document.getElementById(`${otherType}Stop`).disabled = true;
+
             if (pollInterval) {
                 clearInterval(pollInterval);
             }
@@ -324,15 +444,13 @@
             })
             .catch(error => {
                 console.error('Error starting animation:', error);
-                document.getElementById(`${type}Start`).disabled = false;
-                document.getElementById(`${type}Stop`).disabled = true;
+				resetAnimationButtons();
             });
         }
 
         function stopAnimation(type) {
             // Enable start button and disable stop button
-            document.getElementById(`${type}Start`).disabled = false;
-            document.getElementById(`${type}Stop`).disabled = true;
+			document.getElementById(`${type}Stop`).disabled = true;
 
             fetch('/api/updateLights', {
                 method: 'POST',
@@ -350,6 +468,7 @@
                         clearInterval(pollInterval);
                         pollInterval = null;
                     }
+					resetAnimationButtons();
                     loadLEDStates();
                 }
             })
@@ -357,6 +476,54 @@
                 console.error('Error stopping animation:', error);
                 document.getElementById(`${type}Start`).disabled = true;
                 document.getElementById(`${type}Stop`).disabled = false;
+            });
+        }
+
+		function resetAnimationButtons() {
+			// Enable all start buttons
+			document.getElementById('rainStart').disabled = false;
+			document.getElementById('spiralStart').disabled = false;
+			
+			// Disable all stop buttons
+			document.getElementById('rainStop').disabled = true;
+			document.getElementById('spiralStop').disabled = true;
+		}
+
+        function startWeatherEffect() {
+            const city = document.getElementById('cityInput').value;
+            if (!city) {
+                alert('Skriv byen i input');
+                return;
+            }
+
+            // Disable other animation buttons
+            document.getElementById('rainStart').disabled = true;
+            document.getElementById('spiralStart').disabled = true;
+            document.getElementById('weatherStart').disabled = true;
+            document.getElementById('weatherStop').disabled = false;
+
+            fetch('/api/weather', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'weather',
+                    action: 'start',
+                    city: city
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    pollInterval = setInterval(loadLEDStates, 100);
+                    console.log(`Weather: ${data.weather}, Animation: ${data.animation}`);
+                } else {
+                    alert(`Error: ${data.error}`);
+                    resetAnimationButtons();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resetAnimationButtons();
             });
         }
 

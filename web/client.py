@@ -6,7 +6,12 @@ import neopixel
 import requests
 import json
 from collections import defaultdict
-from animations import start_rain, start_spiral, stop_all_animations
+from animations import (
+    start_rain, 
+    start_spiral, 
+    stop_all_animations,
+    start_weather_animation
+)
 
 # LED strip configuration
 pixel_pin = board.D18
@@ -16,7 +21,7 @@ pixels = neopixel.NeoPixel(
 )
 led_states = defaultdict(lambda: '#000000')  # Default color is black (aka turned off)
 
-# Animation state like in animations.py
+# Animation state machine like in animations.py
 animation_state = {
     "is_running": False,
     "current_name": None,
@@ -26,7 +31,7 @@ animation_state = {
 # Try to load LED positions from file
 try:
     led_positions = []
-    with open('data/led_3d_coordinates.txt', 'r') as f:
+    with open('/data/led_3d_coordinates.txt', 'r') as f:
         next(f) # Skip header line which is just "LED ID, X, Y, Z"
         for line in f:
             parts = line.strip().split(',')
@@ -99,6 +104,8 @@ async def handle_command(command):
                 return start_rain(pixels, led_positions, animation_state)
             elif name == 'spiral':
                 return start_spiral(pixels, led_positions, animation_state)
+            elif name in ['snow', 'lightning', 'clear']:
+                return start_weather_animation(pixels, led_positions, animation_state, name)
         elif action == 'stop':
             stop_all_animations(pixels, animation_state)
             return True
