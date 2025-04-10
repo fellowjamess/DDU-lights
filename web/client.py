@@ -31,7 +31,7 @@ animation_state = {
 # Try to load LED positions from file
 try:
     led_positions = []
-    with open('/data/led_3d_coordinates.txt', 'r') as f:
+    with open('../data/led_3d_coordinates.txt', 'r') as f:
         next(f) # Skip header line which is just "LED ID, X, Y, Z"
         for line in f:
             parts = line.strip().split(',')
