@@ -81,14 +81,14 @@ async def apply_led_state(led_id, color):
 # Handle incoming commands
 async def handle_command(command):
     cmd_type = command.get('type')
-    
+
     if cmd_type == 'update':
         led_id = command.get('led')
         color = command.get('color', '#000000')
         if led_id is not None:
             await apply_led_state(led_id, color)
             return True
-    
+
     elif cmd_type == 'updateAll':
         color = command.get('color', '#000000')
         for i in range(num_pixels):
@@ -98,7 +98,7 @@ async def handle_command(command):
     elif cmd_type == 'animation':
         action = command.get('action')
         name = command.get('name')
-        
+
         if action == 'start':
             if name == 'rain':
                 return start_rain(pixels, led_positions, animation_state)
@@ -109,7 +109,7 @@ async def handle_command(command):
         elif action == 'stop':
             stop_all_animations(pixels, animation_state)
             return True
-            
+
     return False
 
 async def connect_to_server():

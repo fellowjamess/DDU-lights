@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -58,6 +58,14 @@ type WeatherData struct {
 	Weather []struct {
 		Main string `json:"main"`
 	} `json:"weather"`
+}
+
+type GeoLocation struct {
+	Name    string  `json:"name"`
+	Lat     float64 `json:"lat"`
+	Lon     float64 `json:"lon"`
+	Country string  `json:"country"`
+	State   string  `json:"state,omitempty"`
 }
 
 type WeatherCommand struct {
@@ -166,24 +174,49 @@ func handleWeather(c *gin.Context) {
 		return
 	}
 
-	// Weather data from OpenWeather API
-	url := fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", cmd.City, apiKey)
-	resp, err := http.Get(url)
+	// Get coordinates using Geocoding API
+	geoURL := fmt.Sprintf("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=1&appid=%s",
+		url.QueryEscape(cmd.City),
+		apiKey,
+	)
+
+	geoResp, err := http.Get(geoURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch location data"})
+		return
+	}
+	defer geoResp.Body.Close()
+
+	var locations []GeoLocation
+	if err := json.NewDecoder(geoResp.Body).Decode(&locations); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse location data"})
+		return
+	}
+
+	if len(locations) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "City not found"})
+		return
+	}
+
+	location := locations[0]
+
+	// Now we can use the coordinates to get the weather data...
+	weatherURL := fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&appid=%s",
+		location.Lat,
+		location.Lon,
+		apiKey,
+	)
+
+	weatherResp, err := http.Get(weatherURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch weather data"})
 		return
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read weather data"})
-		return
-	}
+	defer weatherResp.Body.Close()
 
 	var weatherData WeatherData
-	if err := json.Unmarshal(body, &weatherData); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal weather data"})
+	if err := json.NewDecoder(weatherResp.Body).Decode(&weatherData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse weather data"})
 		return
 	}
 
@@ -192,7 +225,7 @@ func handleWeather(c *gin.Context) {
 		return
 	}
 
-	// Weather conditions to animation command
+	// Convert weather condition to animation type
 	weatherType := weatherData.Weather[0].Main
 	animationType := ""
 
