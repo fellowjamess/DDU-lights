@@ -232,6 +232,11 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf0f0f0); // White background
 
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+            const gridHelper = new THREE.GridHelper(10, 10);
+            scene.add(gridHelper);
+
             const containerWidth = window.innerWidth / 2;
             const containerHeight = window.innerHeight;
 
@@ -246,8 +251,8 @@
 
             // YOU CAN MOVE AROUND!!!
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
             // How smotth the camera movement smoother is
+            controls.enableDamping = true;
             controls.dampingFactor = 0.05;
 
             //const ambientLight = new THREE.AmbientLight(0x404040);
@@ -255,12 +260,6 @@
             //directionalLight.position.set(5, 5, 5);
             //scene.add(ambientLight);
             //scene.add(directionalLight);
-
-            const axesHelper = new THREE.AxesHelper(5);
-            scene.add(axesHelper);
-
-            const gridHelper = new THREE.GridHelper(10, 10);
-            scene.add(gridHelper);
 
             createLEDControls();
             animate();
@@ -274,13 +273,15 @@
         }
 
         function createLEDControls() {
+			// The server should have this number, to send to both client and website
+			// it would be so much easier to update, if we change the number.
             const numLEDs = 40;
             const ledGrid = document.getElementById('ledControls');
             let ledPositions = {};
             
-            // WebSocket connection for real-time updates
+            // WebSocket connection for the good real time updates
             const ws = new WebSocket('ws://95.179.138.135/ws');
-            
+
             ws.onmessage = function(event) {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'positions') {

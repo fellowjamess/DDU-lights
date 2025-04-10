@@ -2,7 +2,7 @@ import time
 import random
 import threading
 
-# State machiness
+# State machine
 animation_state = {
     "is_running": False,
     "current_name": None,
