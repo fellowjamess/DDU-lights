@@ -104,11 +104,11 @@
             text-align: center;
         }
 
-        #rainStart, #spiralStart, #weatherStart {
+        #snowStart, #spiralStart, #weatherStart {
             background-color: #4caf50;
         }
 
-        #rainStop, #spiralStop, #weatherStop {
+        #snowStop, #spiralStop, #weatherStop {
             background-color: #f44336;
         }
 
@@ -185,11 +185,11 @@
                 <div class="animation-controls-grid">
                     <div class="animation-box">
                         <div class="animation-title">
-                            <span>Regn</span>
+                            <span>Sne</span>
                         </div>
                         <div class="control-row">
-                            <button onclick="startAnimation('rain')" id="rainStart" class="animation-button">Start regn</button>
-							<button onclick="stopAnimation('rain')" id="rainStop" class="animation-button" disabled>Stop regn</button>
+                            <button onclick="startAnimation('snow')" id="snowStart" class="animation-button">Start sne</button>
+							<button onclick="stopAnimation('snow')" id="snowStop" class="animation-button" disabled>Stop sne</button>
                         </div>
                     </div>
                     <div class="animation-box">
@@ -419,7 +419,7 @@
 			document.getElementById(`${type}Stop`).disabled = false;
 
 			// Disable both buttons for other animation
-			const otherType = type === 'rain' ? 'spiral' : 'rain';
+			const otherType = type === 'snow' ? 'spiral' : 'snow';
 			document.getElementById(`${otherType}Start`).disabled = true;
 			document.getElementById(`${otherType}Stop`).disabled = true;
 
@@ -481,11 +481,11 @@
 
 		function resetAnimationButtons() {
 			// Enable all start buttons
-			document.getElementById('rainStart').disabled = false;
+			document.getElementById('snowStart').disabled = false;
 			document.getElementById('spiralStart').disabled = false;
 			
 			// Disable all stop buttons
-			document.getElementById('rainStop').disabled = true;
+			document.getElementById('snowStop').disabled = true;
 			document.getElementById('spiralStop').disabled = true;
 		}
 
@@ -497,7 +497,7 @@
             }
 
             // Disable other animation buttons
-            document.getElementById('rainStart').disabled = true;
+            document.getElementById('snowStart').disabled = true;
             document.getElementById('spiralStart').disabled = true;
             document.getElementById('weatherStart').disabled = true;
             document.getElementById('weatherStop').disabled = false;

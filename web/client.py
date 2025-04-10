@@ -7,7 +7,7 @@ import requests
 import json
 from collections import defaultdict
 from animations import (
-    start_rain, 
+    start_snow, 
     start_spiral, 
     stop_all_animations,
     start_weather_animation
@@ -100,11 +100,11 @@ async def handle_command(command):
         name = command.get('name')
 
         if action == 'start':
-            if name == 'rain':
-                return start_rain(pixels, led_positions, animation_state)
+            if name == 'snow':
+                return start_snow(pixels, led_positions, animation_state)
             elif name == 'spiral':
                 return start_spiral(pixels, led_positions, animation_state)
-            elif name in ['snow', 'lightning', 'clear']:
+            elif name in ['rain', 'lightning', 'clear']:
                 return start_weather_animation(pixels, led_positions, animation_state, name)
         elif action == 'stop':
             stop_all_animations(pixels, animation_state)

@@ -210,14 +210,14 @@ def start_weather_animation(pixels, led_positions, state, weather_type):
     return True
 
 # Starts the rain animation
-def start_rain(pixels, led_positions, state):
+def start_snow(pixels, led_positions, state):
     if state["is_running"]:
         return False
         
     state["is_running"] = True
     state["current_name"] = "rain"
     state["thread"] = threading.Thread(
-        target=run_rain_effect, 
+        target=run_snow_effect, 
         args=(pixels, led_positions, state)
     )
     state["thread"].start()
