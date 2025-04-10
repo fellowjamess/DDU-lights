@@ -20,7 +20,7 @@ pixels = neopixel.NeoPixel(
 def setup_camera():
     picam2 = Picamera2()
     preview_config = picam2.create_preview_configuration(
-        main={"size": (1920, 1080)},
+        main={"size": (4608, 2592)},
         buffer_count=4 # Default is 2, but more frame buffers should reduce frame dropping during capture 
     )
     picam2.configure(preview_config)
@@ -141,7 +141,7 @@ def capture_plan(camera, angle_name):
 
 def load_calibration():
     with open("calibration_matrix.yaml", 'r') as f:
-        calibration_data = yaml.load(f)
+        calibration_data = yaml.safe_load(f)
     mtx = np.array(calibration_data['camera_matrix'])
     dist = np.array(calibration_data['dist_coeff'])
     return mtx, dist
