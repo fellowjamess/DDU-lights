@@ -15,6 +15,8 @@ from animations import (
 
 # LED strip configuration
 pixel_pin = board.D18
+# The server should have this number, to send to both client and website
+# it would be so much easier to update, if we change the number.
 num_pixels = 40 # We have 40 LEDs
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=1, auto_write=False
